@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { useFinance } from '../../context/FinanceContext';
+import { useFinance } from '../../hooks/useFinance';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -10,91 +10,122 @@ const ExpensePieChart = ({ frequencyFilter = 'general' }) => {
   const { state } = useFinance();
 
   const data = useMemo(() => {
-    const items = [];
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    let totalLoanPayments = 0;
 
-    // Gastos regulares
+    const frequencyFactor = (freq) => {
+      const map = {
+        semanal: 1 / 2,
+        quincenal: 1,
+        mensual: 2,
+        bimestral: 4,
+        trimestral: 6,
+        semestral: 12,
+        anual: 26,
+      };
+      return map[freq] || 1;
+    };
+
+    // --- 1. Calcular ingresos proyectados según filtro ---
+    state.incomes.forEach((inc) => {
+      const factor = frequencyFactor(frequencyFilter) / frequencyFactor(inc.frequency);
+      totalIncome += parseFloat(inc.amount) * factor || 0;
+    });
+
+    // --- 2. Calcular gastos proyectados según filtro ---
     state.expenses.forEach((exp) => {
-      if (frequencyFilter === 'general' || exp.frequency === frequencyFilter) {
-        items.push({
-          label: `${exp.category} – ${exp.description}`,
-          value: parseFloat(exp.amount) || 0,
-        });
-      }
+      const factor = frequencyFactor(frequencyFilter) / frequencyFactor(exp.frequency);
+      totalExpenses += parseFloat(exp.amount) * factor || 0;
     });
 
-    // Préstamos como elementos individuales
-    state.loans?.forEach((loan) => {
-      if (frequencyFilter === 'general' || loan.frequency === frequencyFilter) {
-        const totalPayments = (() => {
-          switch (loan.frequency) {
-            case 'semanal': return loan.duration * 4;
-            case 'quincenal': return loan.duration * 2;
-            case 'mensual': return loan.duration;
-            case 'bimestral': return Math.ceil(loan.duration / 2);
-            case 'trimestral': return Math.ceil(loan.duration / 3);
-            case 'semestral': return Math.ceil(loan.duration / 6);
-            case 'anual': return Math.ceil(loan.duration / 12);
-            default: return loan.duration;
-          }
-        })();
+    // --- 3. Calcular préstamos/proyectos según filtro ---
+state.loans?.forEach((loan) => {
+  const remaining = loan.total - loan.paid;
+  if (remaining <= 0) return;
 
-        const paymentAmount = totalPayments > 0 ? (loan.total / totalPayments) : 0;
+  // factor según frecuencia del préstamo
+  const loanFactor = {
+    semanal: 1 / 4,
+    quincenal: 1 / 2,
+    mensual: 1,
+    bimestral: 2,
+    trimestral: 3,
+    semestral: 6,
+    anual: 12,
+  }[loan.frequency] || 1;
 
-        items.push({
-          label: `${loan.name} (Préstamo)`,
-          value: paymentAmount,
-        });
-      }
-    });
+  // factor según filtro seleccionado
+  const filterFactor = {
+    semanal: 1 / 2,
+    quincenal: 1,
+    mensual: 2,
+    bimestral: 4,
+    trimestral: 6,
+    semestral: 12,
+    anual: 26,
+  }[frequencyFilter] || 1;
 
-    // Si no hay datos, mostrar mensaje
-    if (items.length === 0) {
-      items.push({ label: 'Sin datos', value: 1 });
-    }
+  // Calculamos la **cuota que corresponde al periodo seleccionado**
+  const cuotaPeriodo = (loan.total / (loan.totalPayments || 1)) * (filterFactor / loanFactor);
+
+  // Solo tomamos lo que debemos pagar este periodo
+  totalLoanPayments += Math.min(cuotaPeriodo, remaining);
+});
+
+
+    // --- 4. Calcular ahorro ---
+    const savings = Math.max(0, totalIncome - totalExpenses - totalLoanPayments);
+    const balance = Math.max(0, totalIncome - (totalExpenses + totalLoanPayments + savings));
+
+    // --- 5. Crear items para el gráfico ---
+    const items = [];
+    if (totalExpenses > 0) items.push({ label: `Gastos`, value: totalExpenses });
+    if (totalLoanPayments > 0) items.push({ label: `Préstamos`, value: totalLoanPayments });
+    if (savings > 0) items.push({ label: `Ahorro`, value: savings });
+    if (balance > 0) items.push({ label: `Balance`, value: balance });
+
+    if (items.length === 0) items.push({ label: 'Sin datos', value: 1 });
 
     return {
-      labels: items.map(item => item.label),
+      labels: items.map((i) => i.label),
       datasets: [
         {
-          data: items.map(item => item.value),
+          data: items.map((i) => i.value),
           backgroundColor: [
-            '#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444',
-            '#06B6D4', '#6B7280', '#EC4899', '#84CC16', '#F97316',
-            '#A855F7', '#14B8A6', '#F472B6', '#93C5FD', '#FDBA74'
-          ].slice(0, items.length),
+            '#EF4444', // rojo = gastos
+            '#F59E0B', // naranja = préstamos
+            '#10B981', // verde = ahorro
+            '#3B82F6', // azul = balance restante
+          ].slice(0, items.length), // adapta colores al número de items
           borderWidth: 1,
         },
       ],
     };
-  }, [state.expenses, state.loans, frequencyFilter]);
+  }, [state.incomes, state.expenses, state.loans, frequencyFilter]);
 
-  const options = useMemo(() => ({
+  const options = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
-        },
-      },
+      legend: { position: 'right' },
       tooltip: {
         callbacks: {
-          label: (context) => {
-            const value = context.raw;
-            const formatted = new Intl.NumberFormat('es-CO', {
-              style: 'currency',
-              currency: 'COP',
-              minimumFractionDigits: 0,
-            }).format(value);
-            return ` ${formatted}`;
+          label: (ctx) => {
+            const value = ctx.raw;
+            const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            const percent = ((value / total) * 100).toFixed(1);
+            return `${ctx.label}: ${value} (${percent}%)`;
           },
         },
-        backgroundColor: '#1f2937',
       },
     },
-  }), []);
+  };
 
-  return <Pie data={data} options={options} />;
+  return (
+ <div style={{ height: '500px', width: '100%', position: 'relative' }}>
+    <Pie data={data} options={options} />
+  </div>
+);
 };
 
 export default ExpensePieChart;

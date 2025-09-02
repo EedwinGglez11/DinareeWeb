@@ -1,144 +1,199 @@
+// src/pages/DebtsPage.jsx
 import React, { useState } from 'react';
-import { useFinance } from '../context/FinanceContext';
+import { useFinance } from '../hooks/useFinance';
+import { saveData } from '../services/storageService';
+import EditableItem from '../components/UI/EditableItem';
+import { formatCurrency } from '../utils/formatters';
 
 const DebtsPage = () => {
   const { state, dispatch } = useFinance();
+
   const [form, setForm] = useState({
     name: '',
-    amount: '',
-    installments: '12',
+    total: '',
+    paid: '',
     frequency: 'mensual',
-    startDate: new Date().toISOString().split('T')[0]
+    startDate: new Date().toISOString().split('T')[0],
+    duration: '', // en meses
   });
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newDebt = {
+
+    if (!form.name || !form.total || !form.startDate) {
+      alert('Por favor completa los campos requeridos');
+      return;
+    }
+
+    const loan = {
       id: Date.now(),
-      ...form,
-      amount: parseFloat(form.amount),
-      paid: 0,
-      startDate: form.startDate
+      type: 'loan',
+      name: form.name,
+      total: parseFloat(form.total),
+      paid: parseFloat(form.paid) || 0,
+      frequency: form.frequency,
+      startDate: form.startDate,
+      duration: parseInt(form.duration) || 12,
+      category: 'Deudas',
     };
 
-    const updatedDebts = [...state.debts, newDebt];
-    dispatch({ type: 'SET_DATA', payload: { ...state, debts: updatedDebts } });
-    saveData({ ...state, debts: updatedDebts });
-    alert('✅ Préstamo agregado');
+    const updatedLoans = [...(state.loans || []), loan];
+    dispatch({ type: 'SET_DATA', payload: { ...state, loans: updatedLoans } });
+    saveData({ ...state, loans: updatedLoans });
+    alert('✅ Préstamo registrado');
+
+    // Resetear formulario
     setForm({
-      name: '', amount: '', installments: '12', frequency: 'mensual', startDate: new Date().toISOString().split('T')[0]
+      name: '',
+      total: '',
+      paid: '',
+      frequency: 'mensual',
+      startDate: new Date().toISOString().split('T')[0],
+      duration: '',
     });
   };
 
-  const handlePayInstallment = (debtId) => {
-    const updatedDebts = state.debts.map(debt => {
-      if (debt.id === debtId && debt.paid < debt.installments) {
-        return { ...debt, paid: debt.paid + 1 };
-      }
-      return debt;
-    });
-    dispatch({ type: 'SET_DATA', payload: { ...state, debts: updatedDebts } });
-    saveData({ ...state, debts: updatedDebts });
+  // Calcular cuota estimada
+  const calculatePayment = () => {
+    const total = parseFloat(form.total) || 0;
+    const duration = parseInt(form.duration) || 0;
+    const freq = form.frequency;
+
+    if (total === 0 || duration === 0) return null;
+
+    let totalPayments = 0;
+    switch (freq) {
+      case 'semanal': totalPayments = duration * 4; break;
+      case 'quincenal': totalPayments = duration * 2; break;
+      case 'mensual': totalPayments = duration; break;
+      case 'bimestral': totalPayments = Math.ceil(duration / 2); break;
+      case 'trimestral': totalPayments = Math.ceil(duration / 3); break;
+      case 'semestral': totalPayments = Math.ceil(duration / 6); break;
+      case 'anual': totalPayments = Math.ceil(duration / 12); break;
+      default: return null;
+    }
+
+    return totalPayments > 0 ? total / totalPayments : null;
   };
 
   return (
     <div className="text-gray-800 dark:text-gray-200">
-      <h1 className="text-3xl font-bold mb-6">Préstamos y Deudas</h1>
+      {/* Formulario de Préstamo */}
+      <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl max-w-4xl mx-auto mb-10 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-2xl font-bold mb-6">Registrar Préstamo o Crédito</h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              placeholder="Nombre del préstamo"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+              required
+            />
+            <input
+              type="number"
+              placeholder="Monto total"
+              name="total"
+              value={form.total}
+              onChange={handleChange}
+              className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+              required
+            />
+            <input
+              type="number"
+              placeholder="Ya pagado (opcional)"
+              name="paid"
+              value={form.paid}
+              onChange={handleChange}
+              className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+            />
+            <input
+              type="number"
+              placeholder="Duración en meses"
+              name="duration"
+              value={form.duration}
+              onChange={handleChange}
+              className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+            />
+            <input
+              type="date"
+              name="startDate"
+              value={form.startDate}
+              onChange={handleChange}
+              className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+            />
+            <select
+              name="frequency"
+              value={form.frequency}
+              onChange={handleChange}
+              className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+            >
+              <option value="semanal">Semanal</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="mensual">Mensual</option>
+              <option value="bimestral">Bimestral</option>
+              <option value="trimestral">Trimestral</option>
+              <option value="semestral">Semestral</option>
+              <option value="anual">Anual</option>
+            </select>
+          </div>
 
-      {/* Formulario */}
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md max-w-2xl mx-auto mb-8">
-        <h2 className="text-xl font-semibold mb-4">Registrar Préstamo</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            placeholder="Nombre (ej: Infonavit, Banco)"
-            name="name"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 bg-white dark:bg-gray-700"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Monto total"
-            name="amount"
-            value={form.amount}
-            onChange={e => setForm({ ...form, amount: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 bg-white dark:bg-gray-700"
-            required
-          />
-          <input
-            type="number"
-            placeholder="Número de cuotas"
-            name="installments"
-            value={form.installments}
-            onChange={e => setForm({ ...form, installments: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 bg-white dark:bg-gray-700"
-            required
-          />
-          <select
-            name="frequency"
-            value={form.frequency}
-            onChange={e => setForm({ ...form, frequency: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 bg-white dark:bg-gray-700"
-          >
-            <option value="mensual">Mensual</option>
-            <option value="quincenal">Quincenal</option>
-            <option value="semanal">Semanal</option>
-          </select>
-          <input
-            type="date"
-            name="startDate"
-            value={form.startDate}
-            onChange={e => setForm({ ...form, startDate: e.target.value })}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 bg-white dark:bg-gray-700"
-          />
+          {/* Mostrar cuota estimada */}
+          {form.total && form.duration && (
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Cuota {form.frequency} estimada:{' '}
+                <span className="font-bold">
+                  {formatCurrency(calculatePayment())}
+                </span>
+              </p>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full bg-danger text-white py-2 rounded-lg"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-all duration-200 shadow-md"
           >
-            + Agregar Préstamo
+            Registrar Préstamo
           </button>
         </form>
       </div>
 
-      {/* Lista de deudas */}
-      <div className="max-w-3xl mx-auto space-y-4">
-        {state.debts?.map(debt => {
-          const progress = (debt.paid / debt.installments) * 100;
-          return (
-            <div
-              key={debt.id}
-              className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-md border-l-6 border-danger"
-            >
-              <div className="flex justify-between">
-                <h3 className="text-lg font-bold">{debt.name}</h3>
-                <span className="text-sm text-gray-500">{debt.paid}/{debt.installments}</span>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(debt.amount)} • {debt.frequency}
-              </p>
-              <div className="mt-2">
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className="bg-danger h-2 rounded-full"
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-              </div>
-              <button
-                onClick={() => handlePayInstallment(debt.id)}
-                disabled={debt.paid >= debt.installments}
-                className="mt-2 text-sm bg-secondary text-white px-3 py-1 rounded disabled:bg-gray-400"
-              >
-                Pagar Cuota
-              </button>
-            </div>
-          );
-        })}
-      </div>
+      {/* Lista de préstamos */}
+      {state.loans?.length > 0 && (
+        <div className="max-w-4xl mx-auto mt-12">
+          <h2 className="text-2xl font-bold mb-6">Préstamos Activos</h2>
+          <div className="space-y-5">
+            {state.loans.map((loan) => (
+              <EditableItem
+                key={loan.id}
+                item={loan}
+                onUpdate={(updatedLoan) => {
+                  const updatedLoans = state.loans.map(l => l.id === loan.id ? updatedLoan : l);
+                  dispatch({ type: 'SET_DATA', payload: { ...state, loans: updatedLoans } });
+                  saveData({ ...state, loans: updatedLoans });
+                  alert('✅ Préstamo actualizado');
+                }}
+                onDelete={(id) => {
+                  const confirm = window.confirm('¿Eliminar este préstamo?');
+                  if (!confirm) return;
+                  const updatedLoans = state.loans.filter(l => l.id !== id);
+                  dispatch({ type: 'SET_DATA', payload: { ...state, loans: updatedLoans } });
+                  saveData({ ...state, loans: updatedLoans });
+                  alert('🗑️ Préstamo eliminado');
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-import { saveData } from '../services/storageService';
 export default DebtsPage;

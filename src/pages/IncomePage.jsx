@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useFinance } from '../context/FinanceContext';
+import { useFinance } from '../hooks/useFinance';
 import EditableItem from '../components/UI/EditableItem';
 import { saveData } from '../services/storageService';
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';

@@ -1,29 +1,37 @@
 // src/context/FinanceContext.js
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useReducer, useEffect } from 'react';
 import { loadData, saveData } from '../services/storageService';
 
 // Datos iniciales
 const defaultData = {
   incomes: [],
   expenses: [],
-  debts: [],
+  debts: [], // Asegúrate de que esté en uso o elimínalo
   goals: [],
+  creditCards: [],
 };
 
 const FinanceContext = createContext();
-
+export { FinanceContext };
 const financeReducer = (state, action) => {
   switch (action.type) {
     case 'SET_DATA':
       return action.payload;
-    case 'ADD_INCOME':
+
+    case 'ADD_INCOME': {
+      // 🔽 Usa llaves en el case para poder declarar `const`
       const newIncomes = [...state.incomes, action.payload];
       saveData({ ...state, incomes: newIncomes });
       return { ...state, incomes: newIncomes };
-    case 'ADD_EXPENSE':
+    }
+
+    case 'ADD_EXPENSE': {
+      // 🔽 Igual aquí
       const newExpenses = [...state.expenses, action.payload];
       saveData({ ...state, expenses: newExpenses });
       return { ...state, expenses: newExpenses };
+    }
+
     default:
       return state;
   }
@@ -34,7 +42,9 @@ export const FinanceProvider = ({ children }) => {
 
   useEffect(() => {
     const data = loadData();
-    dispatch({ type: 'SET_DATA', payload: data });
+    if (data) {
+      dispatch({ type: 'SET_DATA', payload: data });
+    }
   }, []);
 
   return (
@@ -43,5 +53,3 @@ export const FinanceProvider = ({ children }) => {
     </FinanceContext.Provider>
   );
 };
-
-export const useFinance = () => useContext(FinanceContext);

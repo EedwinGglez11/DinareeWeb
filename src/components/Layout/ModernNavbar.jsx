@@ -9,6 +9,7 @@ import {
   FaPiggyBank,
   FaChartBar,
   FaClipboardList,
+  FaCreditCard,
 } from 'react-icons/fa';
 
 const ModernNavbar = ({ children }) => {
@@ -34,6 +35,11 @@ const ModernNavbar = ({ children }) => {
     name: 'Préstamos', 
     path: '/debts', 
     icon: <FaWallet className="w-5 h-5" /> 
+  },
+  {
+    name: 'Tarjetas', 
+    path: '/credit-cards', 
+    icon: <FaCreditCard className="w-5 h-5"/> 
   },
   { 
     name: 'Metas', 

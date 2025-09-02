@@ -3,15 +3,12 @@ import React, { useState } from 'react';
 import { Edit2, Trash2, Save, X } from "lucide-react";
 
 
-const EditableItem = ({ item, type, onUpdate, onDelete, categories = [], renderPreview }) => {
+const EditableItem = ({ item, onUpdate, onDelete = [], renderPreview }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ ...item });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const parsedValue = ['total', 'paid', 'amount'].includes(name)
-      ? parseFloat(value) || 0
-      : value;
     setFormData({ ...formData, [name]: value });
   };
 
@@ -191,45 +188,61 @@ if (isEditing) {
             </>
           )}
 
-          {/* Gasto */}
-          {isExpense && !isLoan && (
-            <>
-              <input
-                type="number"
-                name="amount"
-                value={formData.amount}
-                onChange={handleChange}
-                placeholder="Monto"
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
-                required
-              />
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
-              >
-                {['Transporte', 'Servicios', 'Alimentación', 'Salud', 'Entretenimiento', 'Educación', 'Hogar', 'Ropa', 'Ahorro', 'Deudas', 'Otros'].map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              <input
-                type="text"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="Descripción"
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
-              />
-              <input
-                type="date"
-                name="date"
-                value={formData.date}
-                onChange={handleChange}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
-              />
-            </>
-          )}
+{/* Gasto */}
+{isExpense && !isLoan && (
+  <>
+    <input
+      type="number"
+      name="amount"
+      value={formData.amount}
+      onChange={handleChange}
+      placeholder="Monto"
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
+      required
+    />
+    <select
+      name="category"
+      value={formData.category}
+      onChange={handleChange}
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
+    >
+      {['Transporte', 'Servicios', 'Alimentación', 'Salud', 'Entretenimiento', 'Educación', 'Hogar', 'Ropa', 'Ahorro', 'Deudas', 'Otros'].map(cat => (
+        <option key={cat} value={cat}>{cat}</option>
+      ))}
+    </select>
+    <input
+      type="text"
+      name="description"
+      value={formData.description}
+      onChange={handleChange}
+      placeholder="Descripción"
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
+    />
+    <input
+      type="date"
+      name="date"
+      value={formData.date}
+      onChange={handleChange}
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
+    />
+    {/* Frecuencia del gasto */}
+    <select
+      name="frequency"
+      value={formData.frequency}
+      onChange={handleChange}
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-3 bg-white dark:bg-gray-700"
+    >
+      <option value="único">Único (no repetido)</option>
+      <option value="semanal">Semanal</option>
+      <option value="quincenal">Quincenal</option>
+      <option value="mensual">Mensual</option>
+      <option value="bimestral">Bimestral</option>
+      <option value="trimestral">Trimestral</option>
+      <option value="semestral">Semestral</option>
+      <option value="anual">Anual</option>
+    </select>
+  </>
+)}
         </div>
         <div className="flex justify-end gap-2">
           <button

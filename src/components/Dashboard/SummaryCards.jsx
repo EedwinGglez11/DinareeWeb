@@ -1,57 +1,83 @@
 // src/components/Dashboard/SummaryCards.jsx
 import React, { useMemo } from 'react';
-import { useFinance } from '../../context/FinanceContext';
+import { useFinance } from '../../hooks/useFinance';
 
-const SummaryCards = () => {
+const SummaryCards = ({ frequencyFilter = 'general' }) => {
   const { state } = useFinance();
 
-  // Calculamos los totales con useMemo para evitar cálculos innecesarios
-  const { totalIncome, totalExpenses, balance, savings } = useMemo(() => {
-    const totalIncome = state.incomes.reduce((sum, inc) => sum + parseFloat(inc.amount || 0), 0);
-    const totalExpenses = state.expenses.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0);
-    const balance = totalIncome - totalExpenses;
-    const savings = balance > 0 ? balance : 0;
+  // Factor para normalizar según frecuencia
+  const frequencyFactor = (freq) => {
+    const map = {
+      semanal: 1 / 2,
+      quincenal: 1,
+      mensual: 2,
+      bimestral: 4,
+      trimestral: 6,
+      semestral: 12,
+      anual: 26,
+    };
+    return map[freq] || 1;
+  };
 
-    return { totalIncome, totalExpenses, balance, savings };
-  }, [state.incomes, state.expenses]); // ✅ Solo se recalcula cuando cambian
+  // Calcular ingresos según filtro
+  const totalIncome = useMemo(() => {
+    return state.incomes.reduce((sum, inc) => {
+      const factor = frequencyFactor(frequencyFilter) / frequencyFactor(inc.frequency);
+      return sum + (parseFloat(inc.amount) || 0) * factor;
+    }, 0);
+  }, [state.incomes, frequencyFilter]);
 
-  const format = (num) => new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-  }).format(num);
+  // Calcular gastos según filtro
+  const totalExpenses = useMemo(() => {
+    return state.expenses.reduce((sum, exp) => {
+      const factor = frequencyFactor(frequencyFilter) / frequencyFactor(exp.frequency);
+      return sum + (parseFloat(exp.amount) || 0) * factor;
+    }, 0);
+  }, [state.expenses, frequencyFilter]);
 
-  // En SummaryCards.jsx
-const totalMonthly = [...state.incomes, ...state.expenses]
-  .filter(item => item.frequency === 'mensual')
-  .reduce((sum, item) => sum + (item.amount || 0), 0);
+  // Calcular préstamos según filtro (solo lo que corresponde al periodo)
+  const totalLoansPending = useMemo(() => {
+    return (state.loans || []).reduce((sum, loan) => {
+      const remaining = loan.total - loan.paid;
+      if (remaining <= 0) return sum;
 
-  
+      // Cuota correspondiente al periodo
+      const loanFactor = frequencyFactor(frequencyFilter) / frequencyFactor(loan.frequency);
+      const cuotaPeriodo = (loan.total / (loan.totalPayments || 1)) * loanFactor;
+      return sum + Math.min(cuotaPeriodo, remaining);
+    }, 0);
+  }, [state.loans, frequencyFilter]);
+
+  // Ahorro potencial = ingreso - (gastos + préstamos)
+  const savings = Math.max(0, totalIncome - totalExpenses - totalLoansPending);
+
+  // Balance restante (opcional, dinero disponible no comprometido)
+  const balance = Math.max(0, totalIncome - totalExpenses - totalLoansPending - savings);
+
+  // Formateo de moneda
+  const format = (num) =>
+    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(num);
+
+  // Datos para mostrar
+  const cards = [
+    { title: 'Ingresos Totales', value: totalIncome, color: 'border-blue-500' },
+    { title: 'Gastos Totales', value: totalExpenses, color: 'border-red-500' },
+    { title: 'Préstamos Pendientes', value: totalLoansPending, color: 'border-orange-500' },
+    { title: 'Ahorro Potencial', value: savings, color: 'border-green-500' },
+    balance > 0 && { title: 'Balance Restante', value: balance, color: 'border-indigo-500' },
+  ].filter(Boolean);
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Ingresos */}
-      <div className="bg-white dark:bg-gray-800 border-l-8 border-blue-500 text-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-md transition-colors duration-300">
-        <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300">Ingresos Totales</h3>
-        <p className="text-2xl font-bold mt-2">{format(totalIncome)}</p>
-      </div>
-
-      {/* Gastos */}
-      <div className="bg-white dark:bg-gray-800 border-l-8 border-red-500 text-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-md transition-colors duration-300">
-        <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300">Gastos Totales</h3>
-        <p className="text-2xl font-bold mt-2">{format(totalExpenses)}</p>
-      </div>
-
-      {/* Balance */}
-      <div className="bg-white dark:bg-gray-800 border-l-8 border-green-500 text-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-md transition-colors duration-300">
-        <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300">Balance</h3>
-        <p className="text-2xl font-bold mt-2">{format(balance)}</p>
-      </div>
-
-      {/* Ahorro */}
-      <div className="bg-white dark:bg-gray-800 border-l-8 border-yellow-500 text-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-md transition-colors duration-300">
-        <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300">Ahorro Potencial</h3>
-        <p className="text-2xl font-bold mt-2">{format(savings)}</p>
-      </div>
+      {cards.map((card) => (
+        <div
+          key={card.title}
+          className={`bg-white dark:bg-gray-800 border-l-8 ${card.color} text-gray-800 dark:text-gray-100 p-6 rounded-xl shadow-md transition-colors duration-300`}
+        >
+          <h3 className="text-lg font-medium text-gray-600 dark:text-gray-300">{card.title}</h3>
+          <p className="text-2xl font-bold mt-2">{format(card.value)}</p>
+        </div>
+      ))}
     </div>
   );
 };

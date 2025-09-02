@@ -1,6 +1,6 @@
 // src/pages/GoalsPage.jsx
 import React, { useState } from 'react';
-import { useFinance } from '../context/FinanceContext';
+import { useFinance } from '../hooks/useFinance';
 import { saveData } from '../services/storageService';
 
 const GoalsPage = () => {
@@ -42,17 +42,6 @@ const GoalsPage = () => {
     saveData({ ...state, goals: updatedGoals });
     alert('🗑️ Meta eliminada');
   };
-
-  // Simulamos ahorro: balance mensual disponible
-  const totalIncome = state.incomes
-    .filter(i => new Date(i.date).getMonth() === new Date().getMonth())
-    .reduce((sum, i) => sum + i.amount, 0);
-
-  const totalExpenses = state.expenses
-    .filter(e => new Date(e.date).getMonth() === new Date().getMonth())
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const monthlySavings = Math.max(0, totalIncome - totalExpenses);
 
   return (
     <div className="text-gray-800 dark:text-gray-200">

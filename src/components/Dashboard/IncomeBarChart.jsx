@@ -2,138 +2,164 @@
 import React, { useMemo } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip, Legend } from 'chart.js';
-import { useFinance } from '../../context/FinanceContext';
+import { useFinance } from '../../hooks/useFinance';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
-const IncomeBarChart = ({ frequencyFilter = 'general' }) => {
+const IncomeBarChart = () => {
   const { state } = useFinance();
 
   const chartData = useMemo(() => {
+
     const now = new Date();
     const months = [];
     const incomeByMonth = Array(6).fill(0);
-    const expenseByMonth = Array(6).fill(0);
+    const loanPaymentByMonth = Array(6).fill(0);
+    const creditCardPaymentByMonth = Array(6).fill(0);
+    const savingsByMonth = Array(6).fill(0);
 
-    // Generar los últimos 6 meses
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    // Generar próximos 6 meses
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
       months.push(date.toLocaleString('es-ES', { month: 'short', year: '2-digit' }));
     }
 
-    const getMonthIndex = (dateStr) => {
-      const date = new Date(dateStr);
-      const diff = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
-      return 5 - diff;
+    const getMonthIndex = (date) => {
+      const d = new Date(date);
+      const diff = (d.getFullYear() - now.getFullYear()) * 12 + (d.getMonth() - now.getMonth());
+      return diff;
     };
 
-    // Filtrar ingresos por frecuencia
+    // === 1. Ingresos ===
     state.incomes.forEach((inc) => {
-      if (frequencyFilter === 'general' || inc.frequency === frequencyFilter) {
-        const idx = getMonthIndex(inc.date);
+      const freq = inc.frequency;
+      for (let i = 0; i < 6; i++) {
+        const idx = getMonthIndex(new Date(now.getFullYear(), now.getMonth() + i));
         if (idx >= 0 && idx < 6) {
-          incomeByMonth[idx] += parseFloat(inc.amount) || 0;
+          if (freq === 'mensual') {
+            incomeByMonth[idx] += parseFloat(inc.amount) || 0;
+          } else if (freq === 'quincenal') {
+            incomeByMonth[idx] += (parseFloat(inc.amount) || 0) / 2;
+          }
         }
       }
     });
 
-    // Filtrar gastos por frecuencia
-    state.expenses.forEach((exp) => {
-      if (frequencyFilter === 'general' || exp.frequency === frequencyFilter) {
-        const idx = getMonthIndex(exp.date);
+    // === 2. Préstamos ===
+    state.debts?.forEach((debts) => {
+      const startDate = new Date(debts.startDate);
+      const totalPayments = (() => {
+        switch (debts.frequency) {
+          case 'mensual': return debts.duration;
+          case 'quincenal': return debts.duration * 2;
+          case 'semanal': return debts.duration * 4;
+          default: return debts.duration;
+        }
+      })();
+
+      const paymentAmount = totalPayments > 0 ? debts.total / totalPayments : 0;
+
+      for (let i = 0; i < totalPayments; i++) {
+        const paymentDate = new Date(startDate);
+        switch (debts.frequency) {
+          case 'mensual': paymentDate.setMonth(startDate.getMonth() + i); break;
+          case 'quincenal': paymentDate.setDate(startDate.getDate() + i * 15); break;
+          case 'semanal': paymentDate.setDate(startDate.getDate() + i * 7); break;
+          default: paymentDate.setMonth(startDate.getMonth() + i);
+        }
+
+        const idx = getMonthIndex(paymentDate);
         if (idx >= 0 && idx < 6) {
-          expenseByMonth[idx] += parseFloat(exp.amount) || 0;
+          loanPaymentByMonth[idx] += paymentAmount;
         }
       }
     });
 
-    // Añadir pagos de préstamos según frecuencia
-    state.loans?.forEach((loan) => {
-      if (frequencyFilter === 'general' || loan.frequency === frequencyFilter) {
-        const startDate = new Date(loan.startDate);
-        const totalPayments = (() => {
-          switch (loan.frequency) {
-            case 'semanal': return loan.duration * 4;
-            case 'quincenal': return loan.duration * 2;
-            case 'mensual': return loan.duration;
-            case 'bimestral': return Math.ceil(loan.duration / 2);
-            case 'trimestral': return Math.ceil(loan.duration / 3);
-            case 'semestral': return Math.ceil(loan.duration / 6);
-            case 'anual': return Math.ceil(loan.duration / 12);
-            default: return loan.duration;
-          }
-        })();
+    // === 3. Tarjetas ===
+    state.creditCards?.forEach((card) => {
+      const paymentDate = new Date(card.paymentDate || card.startDate || now);
+      const paymentAmount = card.minPayment || 0;
 
-        const paymentAmount = totalPayments > 0 ? (loan.total / totalPayments) : 0;
-
-        for (let i = 0; i < totalPayments; i++) {
-          const paymentDate = new Date(startDate);
-          switch (loan.frequency) {
-            case 'semanal': paymentDate.setDate(startDate.getDate() + i * 7); break;
-            case 'quincenal': paymentDate.setDate(startDate.getDate() + i * 15); break;
-            case 'mensual': paymentDate.setMonth(startDate.getMonth() + i); break;
-            case 'bimestral': paymentDate.setMonth(startDate.getMonth() + i * 2); break;
-            case 'trimestral': paymentDate.setMonth(startDate.getMonth() + i * 3); break;
-            case 'semestral': paymentDate.setMonth(startDate.getMonth() + i * 6); break;
-            case 'anual': paymentDate.setMonth(startDate.getMonth() + i * 12); break;
-          }
-
-          const idx = getMonthIndex(paymentDate);
-          if (idx >= 0 && idx < 6) {
-            expenseByMonth[idx] += paymentAmount;
-          }
+      let current = new Date(paymentDate);
+      while (getMonthIndex(current) < 6) {
+        const idx = getMonthIndex(current);
+        if (idx >= 0 && idx < 6) {
+          creditCardPaymentByMonth[idx] += paymentAmount;
         }
+        current.setMonth(current.getMonth() + 1);
       }
     });
 
-    return {
+    // === 4. Ahorro ===
+    for (let i = 0; i < 6; i++) {
+      const totalDebts = loanPaymentByMonth[i] + creditCardPaymentByMonth[i];
+      savingsByMonth[i] = Math.max(0, incomeByMonth[i] - totalDebts);
+    }
+
+    const data = {
       labels: months,
       datasets: [
         {
-          label: 'Ingresos',
            incomeByMonth,
+          label: 'Ingresos',
           backgroundColor: 'rgba(16, 185, 129, 0.7)',
           borderColor: '#10B981',
           borderWidth: 1,
         },
         {
-          label: 'Gastos',
-           expenseByMonth,
-          backgroundColor: 'rgba(239, 68, 68, 0.7)',
-          borderColor: '#EF4444',
+           loanPaymentByMonth,
+          label: 'Préstamos',
+          backgroundColor: 'rgba(147, 51, 234, 0.7)',
+          borderColor: '#9333EA',
+          borderWidth: 1,
+        },
+        {
+           creditCardPaymentByMonth,
+          label: 'Tarjetas',
+          backgroundColor: 'rgba(234, 179, 8, 0.7)',
+          borderColor: '#EAB308',
+          borderWidth: 1,
+        },
+        {
+           savingsByMonth,
+          label: 'Ahorro',
+          backgroundColor: 'rgba(59, 130, 246, 0.7)',
+          borderColor: '#3B82F6',
           borderWidth: 1,
         },
       ],
     };
-  }, [state.incomes, state.expenses, state.loans, frequencyFilter]);
 
-  const options = useMemo(() => ({
+    return data;
+  }, [state.incomes, state.debts, state.creditCards]);
+
+  const options = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          color: document.documentElement.classList.contains('dark') ? '#e5e7eb' : '#1f2937',
-        },
-      },
+      legend: { position: 'bottom' },
       tooltip: {
         callbacks: {
-          label: (context) => {
-            const value = context.parsed.y;
-            const formatted = new Intl.NumberFormat('es-CO', {
+          label: (ctx) => {
+            const value = ctx.parsed.y;
+            return `${ctx.dataset.label}: ${new Intl.NumberFormat('es-CO', {
               style: 'currency',
-              currency: 'COP',
-              minimumFractionDigits: 0,
-            }).format(value);
-            return `${context.dataset.label}: ${formatted}`;
-          },
-        },
-        backgroundColor: '#1f2937',
-      },
+              currency: 'COP'
+            }).format(value)}`;
+          }
+        }
+      }
     },
-  }), []);
+    scales: {
+      y: { beginAtZero: true }
+    }
+  };
 
-  return <Bar data={chartData} options={options} />;
+  return (
+    <div style={{ height: '300px', width: '100%' }}>
+      <Bar data={chartData} options={options} />
+    </div>
+  );
 };
 
 export default IncomeBarChart;
