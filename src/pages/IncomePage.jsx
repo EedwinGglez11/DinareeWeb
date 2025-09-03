@@ -55,6 +55,7 @@ const IncomePage = () => {
     <div className="w-full">
         {/* Formulario */}
         <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+        <h2 className="text-2xl font-bold mb-6">Registrar Ingresos</h2>
           <form
             onSubmit={handleSubmit}
             className="grid grid-cols-1 md:grid-cols-2 gap-6"

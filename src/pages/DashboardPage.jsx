@@ -410,10 +410,10 @@ const allPendingPayments = useMemo(() => {
                         onChange={(e) => handlePaymentChange(payment.id, 'action', e.target.value)}
                       >
                         <option value="">¿Qué hiciste?</option>
-                        <option value="pagar">✅ Pagar cuota</option>
-                        <option value="abonar">➕ Abonar monto</option>
-                        {payment.type === 'préstamo' && <option value="liquidar">💡 Liquidar</option>}
-                        <option value="no-pagar">❌ No pagar</option>
+                        <option value="pagar">Pagar cuota</option>
+                        <option value="abonar">Abonar monto</option>
+                        {payment.type === 'préstamo' && <option value="liquidar">Liquidar</option>}
+                        <option value="no-pagar">No pagar</option>
                       </select>
 
                       {showAmountInput && (
