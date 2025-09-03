@@ -1,18 +1,7 @@
 // src/components/Layout/ModernNavbar.jsx
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import {
-  FaHome,
-  FaWallet,
-  FaMoneyBillWave,
-  FaFileInvoiceDollar,
-  FaPiggyBank,
-  FaChartBar,
-  FaClipboardList,
-  FaCreditCard,
-  FaSun,
-  FaMoon,
-} from 'react-icons/fa';
+import { FaHome, FaWallet, FaMoneyBillWave, FaFileInvoiceDollar, FaPiggyBank, FaChartBar, FaClipboardList, FaCreditCard, FaSun, FaMoon, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const ModernNavbar = ({ children }) => {
   const location = useLocation();
@@ -66,31 +55,33 @@ const ModernNavbar = ({ children }) => {
     }`}
   >
         {/* Logo */}
-        <div className={`p-6 border-b border-gray-200 dark:border-gray-700 flex items-center ${
-          isCollapsed ? 'justify-center' : 'justify-between'
-        }`}>
-          {!isCollapsed ? (
-            <>
-              <div>
-                <h1 className="text-xl font-bold text-primary">Dinaree</h1>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Asistente Financiero</p>
-              </div>
-              <button
-                onClick={toggleSidebar}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400"
-              >
-                {isCollapsed ? '→' : '←'}
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={toggleSidebar}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 text-lg"
-            >
-              ≡
-            </button>
-          )}
-        </div>
+<div className={`p-6 border-b border-gray-200 dark:border-gray-700 flex items-center ${
+  isCollapsed ? 'justify-center' : 'justify-between'
+}`}>
+  {!isCollapsed ? (
+    <>
+      <div>
+        <h1 className="text-xl font-bold text-primary">Dinaree</h1>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Asistente Financiero</p>
+      </div>
+      <button
+        onClick={toggleSidebar}
+        className="flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200"
+        title={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
+      >
+        <FaChevronLeft className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'transform rotate-180' : ''}`} />
+      </button>
+    </>
+  ) : (
+    <button
+      onClick={toggleSidebar}
+      className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200"
+      title="Expandir menú"
+    >
+      <FaChevronRight className="w-5 h-5" />
+    </button>
+  )}
+</div>
 
         {/* Menú */}
         <nav className="flex-1 p-4 space-y-2">

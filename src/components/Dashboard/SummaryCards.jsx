@@ -56,15 +56,15 @@ const SummaryCards = ({ frequencyFilter = 'general' }) => {
 
   // Formateo de moneda
   const format = (num) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(num);
+    new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 }).format(num);
 
   // Datos para mostrar
   const cards = [
     { title: 'Ingresos Totales', value: totalIncome, color: 'border-blue-500' },
-    { title: 'Gastos Totales', value: totalExpenses, color: 'border-red-500' },
-    { title: 'Préstamos Pendientes', value: totalLoansPending, color: 'border-orange-500' },
-    { title: 'Ahorro Potencial', value: savings, color: 'border-green-500' },
-    balance > 0 && { title: 'Balance Restante', value: balance, color: 'border-indigo-500' },
+    { title: 'Gastos Totales', value: totalExpenses, color: 'border-blue-500' },
+    { title: 'Préstamos Pendientes', value: totalLoansPending, color: 'border-blue-500' },
+    { title: 'Ahorro Potencial', value: savings, color: 'border-blue-500' },
+    balance > 0 && { title: 'Balance Restante', value: balance, color: 'border-blue-500' },
   ].filter(Boolean);
 
   return (
