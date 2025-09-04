@@ -4,41 +4,78 @@ import { Edit2, Trash2, Save, X } from "lucide-react";
 
 const EditableItem = ({ item, onUpdate, onDelete, renderPreview }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const formDataRef = useRef({ ...item }); // ✅ Usamos ref para mantener el estado del formulario
+  const formDataRef = useRef({ ...item });
 
-  // ✅ Abrir modal: copiar item al ref
   const openModal = () => {
     formDataRef.current = { ...item };
     setIsEditing(true);
   };
 
-  // ✅ Cambiar valor en el formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
     formDataRef.current = { ...formDataRef.current, [name]: value };
   };
 
-  // ✅ Guardar: enviar datos del ref
   const handleSave = () => {
     onUpdate(formDataRef.current);
     setIsEditing(false);
   };
 
-  // ✅ Cancelar: solo cerrar
   const handleCancel = () => {
     setIsEditing(false);
   };
 
- const formatCurrency = (amount) =>
-  new Intl.NumberFormat('es-MX', { // ✅ Cambiado a español de México
-    style: 'currency',
-    currency: 'MXN', // ✅ Moneda correcta: Pesos mexicanos
-    minimumFractionDigits: 2, // ✅ Recomendado: 2 decimales para moneda
-  }).format(amount);
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+      minimumFractionDigits: 2,
+    }).format(amount);
 
+  // === Tipos de item ===
   const isLoan = 'total' in item;
   const isIncome = 'source' in item && 'company' in item;
   const isExpense = 'category' in item && 'description' in item;
+
+  // === Funciones para préstamos ===
+  const getPaymentAmount = () => {
+    const { total, paid, duration, frequency } = formDataRef.current;
+    if (!total || !duration || !frequency) return 0;
+
+    let totalPayments = 0;
+    switch (frequency) {
+      case 'semanal': totalPayments = duration * 4; break;
+      case 'quincenal': totalPayments = duration * 2; break;
+      case 'mensual': totalPayments = duration; break;
+      case 'bimestral': totalPayments = Math.ceil(duration / 2); break;
+      case 'trimestral': totalPayments = Math.ceil(duration / 3); break;
+      case 'semestral': totalPayments = Math.ceil(duration / 6); break;
+      case 'anual': totalPayments = Math.ceil(duration / 12); break;
+      default: return 0;
+    }
+
+    return totalPayments > 0 ? total / totalPayments : 0;
+  };
+
+  const getRemainingPayments = () => {
+    const paymentAmount = getPaymentAmount();
+    const paid = formDataRef.current.paid || 0;
+    const paidCount = paymentAmount > 0 ? Math.floor(paid / paymentAmount) : 0;
+    const totalPayments = (() => {
+      switch (formDataRef.current.frequency) {
+        case 'semanal': return formDataRef.current.duration * 4;
+        case 'quincenal': return formDataRef.current.duration * 2;
+        case 'mensual': return formDataRef.current.duration;
+        default: return formDataRef.current.duration;
+      }
+    })();
+    return Math.max(0, totalPayments - paidCount);
+  };
+
+  const getProgress = () => {
+    const { total, paid } = formDataRef.current;
+    return total > 0 ? (paid / total) * 100 : 0;
+  };
 
   // === Modal de edición ===
   const EditModal = () => (
@@ -279,35 +316,94 @@ const EditableItem = ({ item, onUpdate, onDelete, renderPreview }) => {
     );
   }
 
-  // Vista por defecto
+  // === Vista por defecto: Préstamo (especial) ===
+  if (isLoan) {
+    const startDate = new Date(item.startDate);
+    const progress = getProgress();
+    const remaining = item.total - item.paid;
+    const remainingPayments = getRemainingPayments();
+    const paymentAmount = getPaymentAmount();
+
+    return (
+      <>
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-sm transition">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">{item.name}</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Iniciado: {startDate.toLocaleDateString('es-CO')} • {item.frequency}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-red-600 dark:text-red-400">
+                {formatCurrency(remaining)} restantes
+              </p>
+            </div>
+          </div>
+
+          {remainingPayments > 0 && (
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+              {remainingPayments} pagos de {formatCurrency(paymentAmount)}
+            </p>
+          )}
+
+          <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            ></div>
+          </div>
+
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              onClick={openModal}
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-xs"
+            >
+              <Edit2 className="w-3 h-3 inline" /> Editar
+            </button>
+            <button
+              onClick={() => onDelete(item.id)}
+              className="text-red-600 hover:text-red-800 dark:text-red-400 text-xs"
+            >
+              <Trash2 className="w-3 h-3 inline" /> Eliminar
+            </button>
+          </div>
+        </div>
+
+        {isEditing && <EditModal />}
+      </>
+    );
+  }
+
+  // === Vista por defecto: Ingresos y Gastos ===
   return (
     <>
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-sm transition flex justify-between items-center">
         <div>
           <p className="font-medium text-gray-900 dark:text-white text-sm">
             {isIncome && `${item.source} – ${item.company}`}
-            {isExpense && !isLoan && `${item.category} – ${item.description}`}
+            {isExpense && `${item.category} – ${item.description}`}
           </p>
-         <p className="text-xs text-gray-500 dark:text-gray-400">
-  {item.date.split('-').reverse().join('/')} {/* "2025-06-01" → "01/06/2025" */}
-</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {item.date ? item.date.split('-').reverse().join('/') : 'Fecha no disponible'}
+          </p>
         </div>
         <div className="text-right">
           <p className="font-medium text-gray-900 dark:text-white text-sm">
-            {formatCurrency(item.amount)}
+            {isLoan ? formatCurrency(item.total - item.paid) : formatCurrency(item.amount)}
           </p>
           <div className="flex gap-2 mt-1">
             <button
               onClick={openModal}
               className="text-blue-600 hover:text-blue-800 dark:text-blue-400 text-xs"
             >
-              <Edit2 className="w-3 h-3 inline" />
+              <Edit2 className="w-3 h-3 inline" /> Editar
             </button>
             <button
-              onClick={() => onDelete(item.id)} // Solo notifica que se quiere eliminar
+              onClick={() => onDelete(item.id)}
               className="text-red-600 hover:text-red-800 dark:text-red-400 text-xs"
             >
-              <Trash2 className="w-3 h-3 inline" /> 
+              <Trash2 className="w-3 h-3 inline" /> Eliminar
             </button>
           </div>
         </div>
