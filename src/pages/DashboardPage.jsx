@@ -246,18 +246,18 @@ const DashboardPage = () => {
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
         <h1 className="text-2xl sm:text-3xl font-light text-gray-900 dark:text-white tracking-tight">
-          Dashboard
+          
         </h1>
         <div className="flex gap-2 mt-4 sm:mt-0">
           <button
             onClick={generatePDF}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white transition"
+            className="flex items-center gap-2 text-sm text-red-600 hover:text-red-800 dark:text-red-300 dark:hover:text-red transition"
           >
             <Download className="w-4 h-4" /> PDF
           </button>
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white transition"
+            className="flex items-center gap-2 text-sm text-green-600 hover:text-green-800 dark:text-green-300 dark:hover:text-green transition"
           >
             <FileSpreadsheet className="w-4 h-4" /> Excel
           </button>

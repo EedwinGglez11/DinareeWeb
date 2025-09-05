@@ -54,3 +54,30 @@
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out;
 }
+
+
+/* src/index.css o toast.css */
+.Toastify__toast--success {
+  background: #22c55e;
+  color: white;
+}
+
+.Toastify__toast--error {
+  background: #ef4444;
+  color: white;
+}
+
+/* Modo oscuro personalizado */
+.dark .Toastify__toast {
+  background: #1f2937;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+}
+
+.dark .Toastify__toast--success {
+  background: #15803d;
+}
+
+.dark .Toastify__toast--error {
+  background: #991b1b;
+}
