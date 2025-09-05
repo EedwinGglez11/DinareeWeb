@@ -394,7 +394,7 @@ const CreditCardsPage = () => {
       {/* Lista de tarjetas */}
 <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Tarjetas de Crédito</h3>
-  {state.creditCards.length === 0 ? (
+  {state.creditCards?.length === 0 ? (
     <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No hay tarjetas registradas.</p>
   ) : (
     <div className="space-y-3">
@@ -423,7 +423,7 @@ const CreditCardsPage = () => {
       ))
       ) : (
   <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">
-    No hay préstamos registrados.
+    No hay tarjetas registrados.
   </p>
 )}
     </div>
