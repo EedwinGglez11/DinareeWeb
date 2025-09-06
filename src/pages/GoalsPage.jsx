@@ -15,10 +15,14 @@ const GoalsPage = () => {
   const { state, dispatch } = useFinance();
 
   const [form, setForm] = useState({
-    name: '',
-    targetAmount: '',
-    deadline: '',
-  });
+  name: '',
+  targetAmount: '',
+  currentAmount: '',
+  deadline: '',
+  frequency: 'mensual',
+  priority: 'media',
+  notes: '',
+});
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
@@ -148,60 +152,131 @@ const GoalsPage = () => {
                       <XMarkIcon className="h-6 w-6" />
                     </button>
                   </div>
-
-                  <Dialog.Title as="h3" className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                    {editingGoal ? 'Editar Meta de Ahorro' : 'Crear Meta de Ahorro'}
-                  </Dialog.Title>
+                  <Dialog.Title
+                                                                    as="h3"
+                                                                    className="text-lg font-bold leading-6 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-4 mb-4"
+                                                                  >
+                                                                    {editingGoal ? 'Editar Meta de Ahorro' : 'Crear Meta de Ahorro'}
+                                                                  </Dialog.Title>
+                  
 
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Nombre */}
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Nombre de la meta <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={form.name}
-                          onChange={handleChange}
-                          placeholder="Ej: Viaje a Cancún, Comprar carro"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  {/* Nombre de la meta */}
+  <div className="md:col-span-2">
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+      Nombre de la meta <span className="text-red-500">*</span>
+    </label>
+    <input
+      type="text"
+      name="name"
+      value={form.name}
+      onChange={handleChange}
+      placeholder="Ej: Viaje a Cancún, Fondo de emergencia"
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      required
+    />
+  </div>
 
-                      {/* Monto objetivo */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Monto objetivo (COP) <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          name="targetAmount"
-                          value={form.targetAmount}
-                          onChange={handleChange}
-                          placeholder="10,000,000"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+  {/* Monto objetivo */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+      Monto objetivo (COP) <span className="text-red-500">*</span>
+    </label>
+    <input
+      type="number"
+      name="targetAmount"
+      value={form.targetAmount}
+      onChange={handleChange}
+      placeholder="10,000,000"
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      required
+    />
+  </div>
 
-                      {/* Fecha límite */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Fecha límite <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          name="deadline"
-                          value={form.deadline}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
-                    </div>
+  {/* Monto ahorrado actual */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+      Monto ahorrado actual
+    </label>
+    <input
+      type="number"
+      name="currentAmount"
+      value={form.currentAmount}
+      onChange={handleChange}
+      placeholder="2,500,000"
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+    />
+  </div>
+
+  {/* Fecha límite (opcional) */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+      Fecha límite (opcional)
+    </label>
+    <input
+      type="date"
+      name="deadline"
+      value={form.deadline || ''}
+      onChange={handleChange}
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+    />
+  </div>
+
+  {/* Frecuencia de ahorro */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+      Frecuencia de ahorro
+    </label>
+    <select
+      name="frequency"
+      value={form.frequency || 'mensual'}
+      onChange={handleChange}
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+    >
+      <option value="único">Único (pago inicial)</option>
+      <option value="semanal">Semanal</option>
+      <option value="quincenal">Quincenal</option>
+      <option value="mensual">Mensual</option>
+      <option value="bimestral">Bimestral</option>
+      <option value="trimestral">Trimestral</option>
+      <option value="semestral">Semestral</option>
+      <option value="anual">Anual</option>
+    </select>
+  </div>
+
+  {/* Prioridad */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+      Prioridad
+    </label>
+    <select
+      name="priority"
+      value={form.priority || 'media'}
+      onChange={handleChange}
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+    >
+      <option value="baja">Baja</option>
+      <option value="media">Media</option>
+      <option value="alta">Alta</option>
+    </select>
+  </div>
+</div>
+
+{/* Notas */}
+<div className="md:col-span-2">
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+    Notas (opcional)
+  </label>
+  <textarea
+    name="notes"
+    value={form.notes || ''}
+    onChange={handleChange}
+    placeholder="Ej: Guardar en cuenta de ahorros, usar bono de diciembre"
+    rows="2"
+    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+  />
+</div>
 
                     <div className="flex justify-end gap-3 pt-6">
                       <button
@@ -241,7 +316,7 @@ const GoalsPage = () => {
                   const updatedGoals = state.goals.map(g => (g.id === goal.id ? updatedGoal : g));
                   dispatch({ type: 'SET_DATA', payload: { ...state, goals: updatedGoals } });
                   saveData({ ...state, goals: updatedGoals });
-                  toast.success('✅ Meta actualizada');
+                  toast.success('Meta actualizada');
                 }}
                 onDelete={(id) => {
                   const goal = state.goals.find(g => g.id === id);

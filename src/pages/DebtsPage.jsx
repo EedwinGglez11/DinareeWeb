@@ -26,13 +26,22 @@ const DebtsPage = () => {
   const { state, dispatch } = useFinance();
 
   const [form, setForm] = useState({
-    name: '',
-    total: '',
-    paid: '',
-    frequency: 'mensual',
-    startDate: new Date().toISOString().split('T')[0],
-    duration: '',
-  });
+  name: '',
+  total: '',
+  paid: '',
+  frequency: 'mensual',
+  startDate: '',
+  duration: '',
+  loanType: '',
+  interestRate: '',
+  endDate: '',
+  paymentsMade: 0,
+  paymentMethod: '',
+  autoDebit: 'no',
+  lastPaymentDate: '',
+  nextPaymentDate: '',
+  notes: '',
+});
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({
@@ -128,6 +137,15 @@ const DebtsPage = () => {
       frequency: 'mensual',
       startDate: new Date().toISOString().split('T')[0],
       duration: '',
+      loanType: '',
+      interestRate: '',
+      endDate: '',
+      paymentsMade: 0,
+      paymentMethod: '',
+      autoDebit: 'no',
+      lastPaymentDate: '',
+      nextPaymentDate: '',
+      notes: '',
     });
 
     closeModal();
@@ -181,138 +199,290 @@ const DebtsPage = () => {
                       <XMarkIcon className="h-6 w-6" />
                     </button>
                   </div>
-
-                  <Dialog.Title as="h3" className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                    Registrar Préstamo o Crédito
-                  </Dialog.Title>
+ <Dialog.Title
+                                                  as="h3"
+                                                  className="text-lg font-bold leading-6 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-4 mb-4"
+                                                >
+                                                  Registrar Préstamo
+                                                </Dialog.Title>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Nombre */}
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Nombre del préstamo <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="name"
-                          value={form.name}
-                          onChange={handleChange}
-                          placeholder="Ej: Préstamo bancario, Deuda personal"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-                      {/* Monto total */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Monto total <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          name="total"
-                          value={form.total}
-                          onChange={handleChange}
-                          placeholder="0.00"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+    {/* Nombre del préstamo */}
+    <div className="md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Institución / Prestamista <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        name="name"
+        value={form.name}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
 
-                      {/* Ya pagado */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Ya pagado (opcional)
-                        </label>
-                        <input
-                          type="number"
-                          name="paid"
-                          value={form.paid}
-                          onChange={handleChange}
-                          placeholder="0.00"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
 
-                      {/* Duración */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Duración (meses) <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          name="duration"
-                          value={form.duration}
-                          onChange={handleChange}
-                          placeholder="12"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+    {/* Tipo de préstamo */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Tipo de préstamo
+      </label>
+      <select
+        name="loanType"
+        value={form.loanType || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="">Seleccionar tipo</option>
+        <option value="personal">Personal</option>
+        <option value="hipoteca">Hipoteca</option>
+        <option value="automotriz">Automotriz</option>
+        <option value="estudiantil">Estudiantil</option>
+        <option value="negocio">Negocio</option>
+        <option value="tarjeta">Refinanciamiento de tarjeta</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
 
-                      {/* Fecha inicio */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Fecha de inicio <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="date"
-                          name="startDate"
-                          value={form.startDate}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+    {/* Monto original */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Monto original <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="number"
+        name="total"
+        value={form.total}
+        onChange={handleChange}
+        placeholder="1000000"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
 
-                      {/* Frecuencia */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Frecuencia <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          name="frequency"
-                          value={form.frequency}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        >
-                          {frequencyOptions.map(f => (
-                            <option key={f.value} value={f.value}>{f.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+    {/* Interés (%) */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Tasa de interés (%) <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="number"
+        step="0.01"
+        name="interestRate"
+        value={form.interestRate || 0}
+        onChange={handleChange}
+        placeholder="5.5"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
 
-                    {/* Cuota estimada */}
-                    {form.total && form.duration && (
-                      <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                          Cuota {form.frequency} estimada:{' '}
-                          <span className="font-bold">
-                            {formatCurrency(calculatePayment())}
-                          </span>
-                        </p>
-                      </div>
-                    )}
+    {/* Plazo (meses) */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Plazo (meses) <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="number"
+        name="duration"
+        value={form.duration}
+        onChange={handleChange}
+        placeholder="12"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
 
-                    <div className="flex justify-end gap-3 pt-6">
-                      <button
-                        type="button"
-                        onClick={closeModal}
-                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-lg"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition"
-                      >
-                        Registrar préstamo
-                      </button>
-                    </div>
-                  </form>
+    {/* Fecha de inicio */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Fecha de inicio <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="date"
+        name="startDate"
+        value={form.startDate}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
+
+    {/* Fecha de vencimiento */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Fecha de vencimiento
+      </label>
+      <input
+        type="date"
+        name="endDate"
+        value={form.endDate || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
+
+    {/* Frecuencia */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Frecuencia de pago <span className="text-red-500">*</span>
+      </label>
+      <select
+        name="frequency"
+        value={form.frequency}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      >
+        {frequencyOptions.map(f => (
+          <option key={f.value} value={f.value}>{f.label}</option>
+        ))}
+      </select>
+    </div>
+
+    {/* Ya pagado */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Ya pagado (opcional)
+      </label>
+      <input
+        type="number"
+        name="paid"
+        value={form.paid}
+        onChange={handleChange}
+        placeholder="0.00"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
+
+    {/* Cuotas pagadas */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Cuotas pagadas
+      </label>
+      <input
+        type="number"
+        name="paymentsMade"
+        value={form.paymentsMade || 0}
+        onChange={handleChange}
+        placeholder="3"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
+
+    {/* Método de pago */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Método de pago
+      </label>
+      <select
+        name="paymentMethod"
+        value={form.paymentMethod || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="">Seleccionar...</option>
+        <option value="efectivo">Efectivo</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="depósito">Depósito</option>
+        <option value="tarjeta">Tarjeta</option>
+        <option value="debito-automático">Débito automático</option>
+      </select>
+    </div>
+
+    {/* Débito automático */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        ¿Débito automático?
+      </label>
+      <select
+        name="autoDebit"
+        value={form.autoDebit || 'no'}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="no">No</option>
+        <option value="sí">Sí</option>
+      </select>
+    </div>
+
+    {/* Fecha último pago */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Fecha del último pago
+      </label>
+      <input
+        type="date"
+        name="lastPaymentDate"
+        value={form.lastPaymentDate || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
+
+    {/* Fecha próximo pago */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Fecha del próximo pago
+      </label>
+      <input
+        type="date"
+        name="nextPaymentDate"
+        value={form.nextPaymentDate || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
+
+    {/* Notas */}
+    <div className="md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Notas (opcional)
+      </label>
+      <textarea
+        name="notes"
+        value={form.notes || ''}
+        onChange={handleChange}
+        placeholder="Ej: Sin intereses hasta 2025, factura guardada en Drive"
+        rows="2"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
+  </div>
+
+  {/* Cuota estimada y saldo */}
+  {(form.total && form.duration) && (
+    <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800 space-y-2">
+      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+        Cuota {form.frequency} estimada:{' '}
+        <span className="font-bold">{formatCurrency(calculatePayment())}</span>
+      </p>
+      <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+        Saldo pendiente:{' '}
+        <span className="font-bold">{formatCurrency(form.total - (form.paid || 0))}</span>
+      </p>
+    </div>
+  )}
+
+  <div className="flex justify-end gap-3 pt-6">
+    <button
+      type="button"
+      onClick={closeModal}
+      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-lg"
+    >
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition"
+    >
+      Registrar préstamo
+    </button>
+  </div>
+</form>
                 </Dialog.Panel>
               </Transition.Child>
             </div>

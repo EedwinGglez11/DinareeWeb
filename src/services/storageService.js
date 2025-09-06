@@ -4,6 +4,7 @@ const defaultData = {
   incomes: [],
   expenses: [],
   debts: [],
+  creditCards:[],
   goals: [],
 };
 

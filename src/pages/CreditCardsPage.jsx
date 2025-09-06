@@ -16,21 +16,28 @@ const CreditCardsPage = () => {
   const { state, dispatch } = useFinance();
 
   const [form, setForm] = useState({
-    bank: '',
-    cardName: '',
-    last4Digits: '',
-    creditLimit: '',
-    currentDebt: '',
-    minPayment: '',
-    cutDate: '',
-    paymentDate: '',
-    interestRate: '',
-    frequency: 'mensual',
-    category: 'Deudas',
-    status: 'Activa',
-    notes: '',
-    color: '#3B82F6', // azul por defecto
-  });
+  bank: '',
+  cardName: '',
+  last4Digits: '',
+  creditLimit: '',
+  currentDebt: '',
+  minPayment: '',
+  cutDate: '',
+  paymentDate: '',
+  interestRate: '',
+  frequency: 'mensual',
+  status: 'Activa',
+  notes: '',
+  color: '#3B82F6',
+  // Nuevos campos
+  cardType: '',
+  paymentMethod: '',
+  lastPaymentDate: '',
+  autoDebit: 'no',
+  rewards: '',
+  annualFee: 'no',
+  dueDay: '', // opcional: si prefieres usar número en vez de fecha
+});
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({
@@ -95,19 +102,26 @@ const CreditCardsPage = () => {
     // Resetear y cerrar
     setForm({
       bank: '',
-      cardName: '',
-      last4Digits: '',
-      creditLimit: '',
-      currentDebt: '',
-      minPayment: '',
-      cutDate: '',
-      paymentDate: '',
-      interestRate: '',
-      frequency: 'mensual',
-      category: 'Deudas',
-      status: 'Activa',
-      notes: '',
-      color: '#3B82F6',
+  cardName: '',
+  last4Digits: '',
+  creditLimit: '',
+  currentDebt: '',
+  minPayment: '',
+  cutDate: '',
+  paymentDate: '',
+  interestRate: '',
+  frequency: 'mensual',
+  status: 'Activa',
+  notes: '',
+  color: '#3B82F6',
+  // Nuevos campos
+  cardType: '',
+  paymentMethod: '',
+  lastPaymentDate: '',
+  autoDebit: 'no',
+  rewards: '',
+  annualFee: 'no',
+  dueDay: '', 
     });
 
     closeModal();
@@ -162,228 +176,356 @@ const CreditCardsPage = () => {
                     </button>
                   </div>
 
-                  <Dialog.Title as="h3" className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                    Agregar Tarjeta de Crédito
-                  </Dialog.Title>
+      <Dialog.Title
+                                                                    as="h3"
+                                                                    className="text-lg font-bold leading-6 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-4 mb-4"
+                                                                  >
+                                                                    Agregar Tarjeta de Crédito
+                                                                  </Dialog.Title>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Banco */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Banco / Institución <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="bank"
-                          value={form.bank}
-                          onChange={handleChange}
-                          placeholder="Ej: Nu, BBVA, Santander"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    
+    {/* Banco */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Banco / Institución <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        name="bank"
+        value={form.bank}
+        onChange={handleChange}
+        placeholder="Ej: Nu, BBVA, Santander"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
 
-                      {/* Nombre de la tarjeta */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Nombre de la tarjeta <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="cardName"
-                          value={form.cardName}
-                          onChange={handleChange}
-                          placeholder="Ej: Nu Card, Platinum"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+    {/* Nombre de la tarjeta */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Nombre de la tarjeta <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        name="cardName"
+        value={form.cardName}
+        onChange={handleChange}
+        placeholder="Ej: Nu Card, Platinum"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
 
-                      {/* Últimos 4 dígitos */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Últimos 4 dígitos (opcional)
-                        </label>
-                        <input
-                          type="text"
-                          name="last4Digits"
-                          value={form.last4Digits}
-                          onChange={handleChange}
-                          placeholder="1234"
-                          maxLength="4"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
+    {/* Tipo de tarjeta */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Tipo de tarjeta
+      </label>
+      <select
+        name="cardType"
+        value={form.cardType || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="">Seleccionar tipo</option>
+        <option value="clásica">Clásica</option>
+        <option value="oro">Oro</option>
+        <option value="platino">Platino</option>
+        <option value="black">Black</option>
+        <option value="negocios">Negocios</option>
+        <option value="estudiante">Estudiante</option>
+      </select>
+    </div>
 
-                      {/* Límite de crédito */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Límite de crédito
-                        </label>
-                        <input
-                          type="number"
-                          name="creditLimit"
-                          value={form.creditLimit}
-                          onChange={handleChange}
-                          placeholder="0.00"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
+    {/* Últimos 4 dígitos */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Últimos 4 dígitos (opcional)
+      </label>
+      <input
+        type="text"
+        name="last4Digits"
+        value={form.last4Digits}
+        onChange={handleChange}
+        placeholder="1234"
+        maxLength="4"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
 
-                      {/* Deuda actual */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Deuda actual <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="number"
-                          name="currentDebt"
-                          value={form.currentDebt}
-                          onChange={handleChange}
-                          placeholder="0.00"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          required
-                        />
-                      </div>
+    {/* Límite de crédito */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Límite de crédito
+      </label>
+      <input
+        type="number"
+        name="creditLimit"
+        value={form.creditLimit}
+        onChange={handleChange}
+        placeholder="0.00"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
 
-                      {/* Pago mínimo */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Pago mínimo
-                        </label>
-                        <input
-                          type="number"
-                          name="minPayment"
-                          value={form.minPayment}
-                          onChange={handleChange}
-                          placeholder="0.00"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
+    {/* Deuda actual */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Deuda actual <span className="text-red-500">*</span>
+      </label>
+      <input
+        type="number"
+        name="currentDebt"
+        value={form.currentDebt}
+        onChange={handleChange}
+        placeholder="0.00"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        required
+      />
+    </div>
 
-                      {/* Fecha de corte */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Fecha de corte
-                        </label>
-                        <input
-                          type="date"
-                          name="cutDate"
-                          value={form.cutDate}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
+    {/* Pago mínimo */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Pago mínimo
+      </label>
+      <input
+        type="number"
+        name="minPayment"
+        value={form.minPayment}
+        onChange={handleChange}
+        placeholder="0.00"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
 
-                      {/* Fecha de pago */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Fecha de pago
-                        </label>
-                        <input
-                          type="date"
-                          name="paymentDate"
-                          value={form.paymentDate}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
+    {/* Fecha de corte */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Fecha de corte
+      </label>
+      <input
+        type="date"
+        name="cutDate"
+        value={form.cutDate||''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
 
-                      {/* Tasa de interés */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Tasa de interés (%)
-                        </label>
-                        <input
-                          type="number"
-                          name="interestRate"
-                          value={form.interestRate}
-                          onChange={handleChange}
-                          placeholder="1.5"
-                          step="0.01"
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        />
-                      </div>
+    {/* Fecha de pago */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Fecha de pago
+      </label>
+      <input
+        type="date"
+        name="paymentDate"
+        value={form.paymentDate|| ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
 
-                      {/* Frecuencia */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Frecuencia de pago
-                        </label>
-                        <select
-                          name="frequency"
-                          value={form.frequency}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="mensual">Mensual</option>
-                          <option value="quincenal">Quincenal</option>
-                        </select>
-                      </div>
+    {/* Día de corte (alternativa numérica) */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Día de corte (mes)
+      </label>
+      <input
+        type="number"
+        name="dueDay"
+        value={form.dueDay || ''}
+        onChange={handleChange}
+        placeholder="15"
+        min="1"
+        max="31"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
 
-                      {/* Estado */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Estado
-                        </label>
-                        <select
-                          name="status"
-                          value={form.status}
-                          onChange={handleChange}
-                          className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="Activa">Activa</option>
-                          <option value="Inactiva">Inactiva</option>
-                        </select>
-                      </div>
+    {/* Tasa de interés */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Tasa de interés (%)
+      </label>
+      <input
+        type="number"
+        name="interestRate"
+        value={form.interestRate}
+        onChange={handleChange}
+        placeholder="1.5"
+        step="0.01"
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
 
-                      {/* Color */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                          Color
-                        </label>
-                        <input
-                          type="color"
-                          name="color"
-                          value={form.color}
-                          onChange={handleChange}
-                          className="w-full p-1 h-10 border border-gray-300 dark:border-gray-600 rounded-lg"
-                        />
-                      </div>
-                    </div>
+    {/* Frecuencia */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Frecuencia de pago
+      </label>
+      <select
+        name="frequency"
+        value={form.frequency}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="mensual">Mensual</option>
+        <option value="quincenal">Quincenal</option>
+      </select>
+    </div>
 
-                    {/* Notas */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-                        Notas
-                      </label>
-                      <textarea
-                        name="notes"
-                        value={form.notes}
-                        onChange={handleChange}
-                        placeholder="Ej: Cashback 2%, sin anualidad"
-                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        rows="2"
-                      />
-                    </div>
+    {/* Estado */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Estado
+      </label>
+      <select
+        name="status"
+        value={form.status}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="Activa">Activa</option>
+        <option value="Inactiva">Inactiva</option>
+      </select>
+    </div>
 
-                    <div className="flex justify-end gap-3 pt-6">
-                      <button
-                        type="button"
-                        onClick={closeModal}
-                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-lg"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition"
-                      >
-                        Registrar tarjeta
-                      </button>
-                    </div>
-                  </form>
+    {/* Método de pago */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Método de pago
+      </label>
+      <select
+        name="paymentMethod"
+        value={form.paymentMethod || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="">Seleccionar...</option>
+        <option value="efectivo">Efectivo</option>
+        <option value="transferencia">Transferencia</option>
+        <option value="depósito">Depósito</option>
+        <option value="tarjeta">Otra tarjeta</option>
+        <option value="debito-automático">Débito automático</option>
+      </select>
+    </div>
+
+    {/* Fecha último pago */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Fecha del último pago
+      </label>
+      <input
+        type="date"
+        name="lastPaymentDate"
+        value={form.lastPaymentDate || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      />
+    </div>
+
+    {/* Débito automático */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        ¿Débito automático?
+      </label>
+      <select
+        name="autoDebit"
+        value={form.autoDebit || 'no'}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="no">No</option>
+        <option value="sí">Sí</option>
+      </select>
+    </div>
+
+    {/* Beneficios / Recompensas */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Beneficios
+      </label>
+      <select
+        name="rewards"
+        value={form.rewards || ''}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="">Seleccionar beneficios</option>
+        <option value="cashback">Cashback</option>
+        <option value="millas">Millas aéreas</option>
+        <option value="puntos">Puntos por compras</option>
+        <option value="seguros">Seguros incluidos</option>
+        <option value="ninguno">Ninguno</option>
+      </select>
+    </div>
+
+    {/* Cuota anual */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Cuota anual
+      </label>
+      <select
+        name="annualFee"
+        value={form.annualFee || 'no'}
+        onChange={handleChange}
+        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      >
+        <option value="no">No tiene</option>
+        <option value="sí">Sí, tiene</option>
+      </select>
+    </div>
+
+    {/* Color */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+        Color
+      </label>
+      <input
+        type="color"
+        name="color"
+        value={form.color}
+        onChange={handleChange}
+        className="w-full p-1 h-10 border border-gray-300 dark:border-gray-600 rounded-lg"
+      />
+    </div>
+  </div>
+
+  {/* Notas */}
+  <div>
+    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+      Notas
+    </label>
+    <textarea
+      name="notes"
+      value={form.notes}
+      onChange={handleChange}
+      placeholder="Ej: Cashback 2%, sin anualidad, promoción 0% hasta junio"
+      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      rows="2"
+    />
+  </div>
+
+  <div className="flex justify-end gap-3 pt-6">
+    <button
+      type="button"
+      onClick={closeModal}
+      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white rounded-lg"
+    >
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition"
+    >
+      Registrar tarjeta
+    </button>
+  </div>
+</form>
                 </Dialog.Panel>
               </Transition.Child>
             </div>
