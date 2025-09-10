@@ -1,5 +1,5 @@
 // src/pages/DashboardPage.jsx
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useFinance } from '../hooks/useFinance';
 import SummaryCards from '../components/Dashboard/SummaryCards';
 import ExpensePieChart from '../components/Dashboard/ExpensePieChart';
@@ -14,14 +14,11 @@ const DashboardPage = () => {
   const { state } = useFinance();
   const now = useMemo(() => new Date(), []);
 
-  /*const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();*/
-
-  // === Próximos pagos ===
+  // === Generar todos los próximos pagos: gastos, préstamos y tarjetas ===
   const allPendingPayments = useMemo(() => {
     const payments = [];
 
-    // Gastos recurrentes
+    // 1. Gastos recurrentes y únicos
     (state.expenses || []).forEach((exp) => {
       if (exp.frequency === 'único') {
         const date = new Date(exp.date);
@@ -37,88 +34,197 @@ const DashboardPage = () => {
           });
         }
       } else {
-        const lastPaymentDate = new Date(exp.date);
-        if (isNaN(lastPaymentDate.getTime())) return;
-
-        const nextPaymentDate = new Date(lastPaymentDate);
-        switch (exp.frequency) {
-          case 'semanal': nextPaymentDate.setDate(lastPaymentDate.getDate() + 7); break;
-          case 'quincenal': nextPaymentDate.setDate(lastPaymentDate.getDate() + 15); break;
-          case 'mensual': nextPaymentDate.setMonth(lastPaymentDate.getMonth() + 1); break;
-          default: return;
-        }
-
-        if (nextPaymentDate >= now) {
-          payments.push({
-            id: exp.id,
-            type: 'gasto',
-            name: exp.description,
-            category: exp.category,
-            amount: exp.amount,
-            dueDate: nextPaymentDate.toISOString().split('T')[0],
-            paymentType: `Próximo pago (${exp.frequency})`,
-          });
-        }
+        // ✅ Usar nextPaymentDate si existe, si no calcularlo
+    let nextPaymentDate;
+    if (exp.nextPaymentDate) {
+      nextPaymentDate = new Date(exp.nextPaymentDate);
+    } else {
+      const lastPaymentDate = new Date(exp.date);
+      if (isNaN(lastPaymentDate.getTime())) return;
+      nextPaymentDate = new Date(lastPaymentDate);
+      switch (exp.frequency) {
+        case 'semanal': nextPaymentDate.setDate(lastPaymentDate.getDate() + 7); break;
+        case 'quincenal': nextPaymentDate.setDate(lastPaymentDate.getDate() + 15); break;
+        case 'mensual': nextPaymentDate.setMonth(lastPaymentDate.getMonth() + 1); break;
+        default: return;
       }
+    }
+
+    if (nextPaymentDate >= now) {
+      payments.push({
+        id: exp.id,
+        type: 'gasto',
+        name: exp.description,
+        category: exp.category,
+        amount: exp.amount,
+        dueDate: nextPaymentDate.toISOString().split('T')[0],
+        paymentType: `Próximo pago (${exp.frequency})`,
+      });
+    }
+  }
     });
 
-    // Préstamos
-    (state.loans || []).forEach((loan) => {
-      const startDate = new Date(loan.startDate);
-      if (isNaN(startDate.getTime())) return;
+// 2. Préstamos (cuotas pendientes)
+(state.loans || []).forEach((loan) => {
+  // Validación básica
+  if (!loan.name || !loan.total || !loan.duration || loan.total <= 0 || loan.duration <= 0) {
+    console.warn('Préstamo con datos inválidos:', loan);
+    return;
+  }
 
-      const totalPayments = (() => {
-        switch (loan.frequency) {
-          case 'semanal': return loan.duration * 4;
-          case 'quincenal': return loan.duration * 2;
-          case 'mensual': return loan.duration;
-          default: return loan.duration;
-        }
-      })();
-      const paymentAmount = totalPayments > 0 ? loan.total / totalPayments : 0;
-      const paidCount = Math.floor(loan.paid / paymentAmount);
+  const startDate = new Date(loan.startDate);
+  if (isNaN(startDate.getTime())) return;
 
-      if (paidCount < totalPayments) {
-        const nextPaymentDate = new Date(startDate);
-        nextPaymentDate.setMonth(startDate.getMonth() + paidCount + 1);
-        if (nextPaymentDate >= now) {
-          payments.push({
-            id: `${loan.id}-loan-${paidCount + 1}`,
-            type: 'préstamo',
-            name: loan.name,
-            amount: paymentAmount,
-            dueDate: nextPaymentDate.toISOString().split('T')[0],
-            paymentType: `Cuota ${paidCount + 1}/${totalPayments}`,
-          });
-        }
-      }
-    });
+  const totalPayments = (() => {
+    switch (loan.frequency) {
+      case 'semanal': return loan.duration * 4;
+      case 'quincenal': return loan.duration * 2;
+      case 'mensual': return loan.duration;
+      default: return loan.duration;
+    }
+  })();
+  const paymentAmount = totalPayments > 0 ? loan.total / totalPayments : 0;
+  const paidCount = Math.floor(loan.paid / paymentAmount);
 
-    // Tarjetas de crédito
-    (state.creditCards || []).forEach((card) => {
-      if (card.minPayment > 0 && card.currentDebt > 0) {
-        const baseDate = card.paymentDate ? new Date(card.paymentDate) : card.cutDate ? new Date(card.cutDate) : now;
-        if (isNaN(baseDate.getTime())) return;
+  if (paidCount < totalPayments) {
+    // Usar lastPaymentDate si existe, si no usar startDate
+    const baseDate = loan.lastPaymentDate ? new Date(loan.lastPaymentDate) : startDate;
+    const nextPaymentDate = new Date(baseDate);
 
-        const nextPaymentDate = new Date(baseDate);
-        nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
-        if (nextPaymentDate >= now) {
-          payments.push({
-            id: `${card.id}-card`,
-            type: 'tarjeta',
-            name: `${card.cardName} (${card.bank})`,
-            amount: card.minPayment,
-            dueDate: nextPaymentDate.toISOString().split('T')[0],
-            paymentType: 'Pago mínimo',
-          });
-        }
-      }
-    });
+    switch (loan.frequency) {
+      case 'semanal':
+        nextPaymentDate.setDate(baseDate.getDate() + 7);
+        break;
+      case 'quincenal':
+        nextPaymentDate.setDate(baseDate.getDate() + 15);
+        break;
+      case 'mensual':
+      default:
+        nextPaymentDate.setMonth(baseDate.getMonth() + 1);
+        break;
+    }
 
+    if (nextPaymentDate >= now) {
+      payments.push({
+        id: `${loan.id}-loan-${paidCount + 1}`,
+        type: 'préstamo',
+        name: loan.name,
+        amount: paymentAmount,
+        dueDate: nextPaymentDate.toISOString().split('T')[0],
+        paymentType: `Cuota ${paidCount + 1}/${totalPayments}`,
+      });
+    }
+  }
+});
+
+
+    // 3. Tarjetas de crédito (pago mínimo)
+(state.creditCards || []).forEach((card) => {
+  if (!card.cardName || card.minPayment <= 0 || card.currentDebt <= 0) {
+    console.warn('Tarjeta con datos inválidos:', card);
+    return;
+  }
+
+  // Usar paymentDate como base (día del mes para pagar)
+  if (!card.paymentDate) {
+    console.warn('Tarjeta sin fecha de pago:', card);
+    return;
+  }
+
+  const paymentDate = new Date(card.paymentDate);
+  if (isNaN(paymentDate.getTime())) {
+    console.warn('Fecha de pago inválida:', card.paymentDate);
+    return;
+  }
+
+  const dayOfMonth = paymentDate.getDate(); // Ej: 10 (del 10 de cada mes)
+  const now = new Date();
+
+  // Construir la fecha de pago de este mes
+  let nextPaymentDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+
+  // Si ya pasó este mes, usar el mes siguiente
+  if (nextPaymentDate < now) {
+    nextPaymentDate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
+  }
+
+  // Asegurarnos de que sea una fecha válida (ej: no 30 de febrero)
+  if (isNaN(nextPaymentDate.getTime())) {
+    console.warn('Fecha de pago inválida generada:', nextPaymentDate);
+    return;
+  }
+
+  payments.push({
+    id: `${card.id}-card`,
+    type: 'tarjeta',
+    name: `${card.cardName} (${card.bank})`,
+    amount: card.minPayment,
+    dueDate: nextPaymentDate.toISOString().split('T')[0],
+    paymentType: 'Pago mínimo',
+  });
+});
+    
+
+    // Ordenar por fecha (próximos primero)
     return payments.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   }, [state.expenses, state.loans, state.creditCards, now]);
 
-  const totalAmountDue = allPendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  // === Filtro: Esta semana / Esta quincena / Este mes ===
+  const [filter, setFilter] = useState('week');
+
+  const getDateRange = () => {
+    const today = new Date();
+    let start, end;
+
+    switch (filter) {
+      case 'week': {
+        const day = today.getDay();
+        const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
+        start = new Date(today);
+        start.setDate(diffToMonday);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+
+      case 'fortnight': {
+        const date = today.getDate();
+        if (date <= 15) {
+          start = new Date(today.getFullYear(), today.getMonth(), 1);
+          end = new Date(today.getFullYear(), today.getMonth(), 15, 23, 59, 59, 999);
+        } else {
+          start = new Date(today.getFullYear(), today.getMonth(), 16);
+          end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+        }
+        break;
+      }
+
+      case 'month':
+      default: {
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      }
+    }
+
+    return { start, end };
+  };
+
+  const { start, end } = getDateRange();
+
+const filteredPayments = allPendingPayments.filter(p => {
+  const dueDate = new Date(p.dueDate);
+  dueDate.setHours(0, 0, 0, 0);
+
+  return dueDate >= start && dueDate <= end;
+});
+
+  const totalAmountDue = filteredPayments.reduce((sum, p) => {
+  const amount = Number(p.amount);
+  return sum + (isNaN(amount) ? 0 : amount);
+}, 0);
 
   // === Exportaciones ===
   const generatePDF = () => {
@@ -168,18 +274,43 @@ const DashboardPage = () => {
 
         {/* Próximos pagos */}
         <section className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-          <h2 className="text-lg font-medium flex items-center gap-2 text-gray-700 dark:text-gray-100 mb-4">
-            <Calendar className="w-4 h-4 text-blue-500" /> Próximos Pagos
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h2 className="text-lg font-medium flex items-center gap-2 text-gray-700 dark:text-gray-100">
+              <Calendar className="w-4 h-4 text-blue-500" /> Próximos Pagos
+            </h2>
+
+            {/* Filtro */}
+            <div className="flex gap-1 mt-2 sm:mt-0">
+              {[
+                { key: 'week', label: 'Esta semana' },
+                { key: 'fortnight', label: 'Esta quincena' },
+                { key: 'month', label: 'Este mes' }
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  className={`text-xs px-3 py-1 rounded-full transition ${
+                    filter === key
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4 text-sm">
             <span>Total: <strong>{new Intl.NumberFormat('es-MX').format(totalAmountDue)}</strong></span>
-            <span className="text-xs text-gray-500">{allPendingPayments.length} pagos</span>
+            <span className="text-xs text-gray-500">{filteredPayments.length} pagos</span>
           </div>
-          {allPendingPayments.length === 0 ? (
-            <p className="text-sm text-gray-500">No hay pagos pendientes.</p>
+
+          {filteredPayments.length === 0 ? (
+            <p className="text-sm text-gray-500">No hay pagos programados en este periodo.</p>
           ) : (
             <div className="space-y-2 max-h-60 overflow-y-auto">
-              {allPendingPayments.slice(0, 5).map(p => (
+              {filteredPayments.map(p => (
                 <div key={p.id} className="flex justify-between text-sm border-b pb-2 dark:border-gray-700">
                   <div>
                     <p className="font-medium">{p.name}</p>
@@ -206,7 +337,7 @@ const DashboardPage = () => {
             <ExpenseCategoryChart />
           </div>
         </div>
-        
+
       </div>
     </div>
   );
