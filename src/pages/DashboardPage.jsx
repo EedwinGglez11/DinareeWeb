@@ -8,70 +8,155 @@ import ExpenseCategoryChart from '../components/Dashboard/ExpenseCategoryChart';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { exportToExcel } from '../services/exportService';
-import { Download, FileSpreadsheet, Calendar } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { Download, FileSpreadsheet, Calendar,CreditCard, DollarSign, Landmark } from "lucide-react";
 
 const DashboardPage = () => {
   const { state } = useFinance();
   const now = useMemo(() => new Date(), []);
 
+  // === Función para generar fechas de pago dentro de un rango ===
+  const generatePaymentDates = (startDate, frequency, endDate, periodStart, periodEnd) => {
+    const dates = [];
+    let current = new Date(startDate);
+
+    // Ajustar al primer pago dentro del periodo si es necesario
+    if (current < periodStart) {
+      const dayDiff = Math.floor((periodStart - startDate) / (1000 * 60 * 60 * 24));
+      switch (frequency) {
+        case 'semanal': {
+          const weeksToAdd = Math.ceil(dayDiff / 7);
+          current.setDate(startDate.getDate() + weeksToAdd * 7);
+          break;
+        }
+        case 'quincenal': {
+          const fortnightsToAdd = Math.ceil(dayDiff / 15);
+          current.setDate(startDate.getDate() + fortnightsToAdd * 15);
+          break;
+        }
+        case 'mensual': {
+          const monthsToAdd = Math.ceil(dayDiff / 30);
+          current.setMonth(startDate.getMonth() + monthsToAdd);
+          break;
+        }
+        default:
+          current = new Date(periodStart);
+      }
+    }
+
+    while (current <= periodEnd) {
+      dates.push(new Date(current));
+      switch (frequency) {
+        case 'semanal':
+          current.setDate(current.getDate() + 7);
+          break;
+        case 'quincenal':
+          current.setDate(current.getDate() + 15);
+          break;
+        case 'mensual':
+          current.setMonth(current.getMonth() + 1);
+          break;
+        default:
+          current.setMonth(current.getMonth() + 1);
+      }
+      if (endDate && current > endDate) break;
+    }
+
+    return dates;
+  };
+
   // === Generar todos los próximos pagos: gastos, préstamos y tarjetas ===
   const allPendingPayments = useMemo(() => {
     const payments = [];
 
-    // 1. Gastos recurrentes y únicos
+    // Definir rangos de tiempo
+    const { start: weekStart, end: weekEnd } = (() => {
+      const day = now.getDay();
+      const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+      const start = new Date(now);
+      start.setDate(diffToMonday);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    })();
+
+    const { start: fortnightStart, end: fortnightEnd } = (() => {
+      const date = now.getDate();
+      const start = new Date(now.getFullYear(), now.getMonth(), date <= 15 ? 1 : 16);
+      const end = new Date(now.getFullYear(), now.getMonth(), date <= 15 ? 15 : 0);
+      end.setHours(23, 59, 59, 999);
+      return { start, end };
+    })();
+
+    const { start: monthStart, end: monthEnd } = (() => {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      return { start, end };
+    })();
+
+    // Helper: agregar pagos en cada rango
+    const addPaymentsInRange = ({ id, name, category, amount, type, paymentType, startDate, frequency, endDate, countLimit = Infinity }) => {
+  const ranges = {
+    week: { start: weekStart, end: weekEnd },
+    fortnight: { start: fortnightStart, end: fortnightEnd },
+    month: { start: monthStart, end: monthEnd },
+  };
+
+  Object.entries(ranges).forEach(([rangeKey, { start, end }]) => {
+    const dates = generatePaymentDates(startDate, frequency, endDate, start, end);
+    dates.slice(0, countLimit).forEach(date => {
+      payments.push({
+        id: `${id}-${rangeKey}-${date.toISOString().split('T')[0]}`,
+        name,
+        category,
+        amount,
+        dueDate: date.toISOString().split('T')[0],
+        type,
+        paymentType: typeof paymentType === 'function' ? paymentType(date) : paymentType,
+        range: rangeKey,
+      });
+    });
+  });
+};
+    // 1. Gastos recurrentes
     (state.expenses || []).forEach((exp) => {
       if (exp.frequency === 'único') {
         const date = new Date(exp.date);
         if (!isNaN(date.getTime()) && date >= now) {
           payments.push({
             id: exp.id,
-            type: 'gasto',
             name: exp.description,
             category: exp.category,
             amount: exp.amount,
             dueDate: exp.date,
+            type: 'gasto',
             paymentType: 'Pago único',
+            range: 'month', // aparece en todos
           });
         }
       } else {
-        // ✅ Usar nextPaymentDate si existe, si no calcularlo
-    let nextPaymentDate;
-    if (exp.nextPaymentDate) {
-      nextPaymentDate = new Date(exp.nextPaymentDate);
-    } else {
-      const lastPaymentDate = new Date(exp.date);
-      if (isNaN(lastPaymentDate.getTime())) return;
-      nextPaymentDate = new Date(lastPaymentDate);
-      switch (exp.frequency) {
-        case 'semanal': nextPaymentDate.setDate(lastPaymentDate.getDate() + 7); break;
-        case 'quincenal': nextPaymentDate.setDate(lastPaymentDate.getDate() + 15); break;
-        case 'mensual': nextPaymentDate.setMonth(lastPaymentDate.getMonth() + 1); break;
-        default: return;
-      }
-    }
+        const startDate = new Date(exp.date);
+        if (isNaN(startDate.getTime())) return;
 
-    if (nextPaymentDate >= now) {
-      payments.push({
-        id: exp.id,
-        type: 'gasto',
-        name: exp.description,
-        category: exp.category,
-        amount: exp.amount,
-        dueDate: nextPaymentDate.toISOString().split('T')[0],
-        paymentType: `Próximo pago (${exp.frequency})`,
-      });
-    }
-  }
+        addPaymentsInRange({
+          id: exp.id,
+          name: exp.description,
+          category: exp.category,
+          amount: exp.amount,
+          type: 'gasto',
+          paymentType: `Recurrente (${exp.frequency})`,
+          startDate,
+          frequency: exp.frequency,
+          endDate: exp.endDate ? new Date(exp.endDate) : null,
+        });
+      }
     });
 
-// 2. Préstamos (cuotas pendientes)
+    // 2. Préstamos
+    // 2. Préstamos
 (state.loans || []).forEach((loan) => {
-  // Validación básica
-  if (!loan.name || !loan.total || !loan.duration || loan.total <= 0 || loan.duration <= 0) {
-    console.warn('Préstamo con datos inválidos:', loan);
-    return;
-  }
-
   const startDate = new Date(loan.startDate);
   if (isNaN(startDate.getTime())) return;
 
@@ -86,145 +171,84 @@ const DashboardPage = () => {
   const paymentAmount = totalPayments > 0 ? loan.total / totalPayments : 0;
   const paidCount = Math.floor(loan.paid / paymentAmount);
 
-  if (paidCount < totalPayments) {
-    // Usar lastPaymentDate si existe, si no usar startDate
-    const baseDate = loan.lastPaymentDate ? new Date(loan.lastPaymentDate) : startDate;
-    const nextPaymentDate = new Date(baseDate);
-
+  // Helper: calcular número de cuota por fecha
+  const getInstallmentNumber = (date) => {
+    const daysDiff = (new Date(date) - startDate) / (1000 * 60 * 60 * 24);
+    let installment = 1;
     switch (loan.frequency) {
       case 'semanal':
-        nextPaymentDate.setDate(baseDate.getDate() + 7);
+        installment = Math.floor(daysDiff / 7) + 1;
         break;
       case 'quincenal':
-        nextPaymentDate.setDate(baseDate.getDate() + 15);
+        installment = Math.floor(daysDiff / 15) + 1;
         break;
       case 'mensual':
-      default:
-        nextPaymentDate.setMonth(baseDate.getMonth() + 1);
+        installment = (date.getFullYear() - startDate.getFullYear()) * 12 +
+                      (date.getMonth() - startDate.getMonth()) + 1;
         break;
+      default:
+        installment = 1;
     }
+    return installment;
+  };
 
-    if (nextPaymentDate >= now) {
-      payments.push({
-        id: `${loan.id}-loan-${paidCount + 1}`,
-        type: 'préstamo',
-        name: loan.name,
-        amount: paymentAmount,
-        dueDate: nextPaymentDate.toISOString().split('T')[0],
-        paymentType: `Cuota ${paidCount + 1}/${totalPayments}`,
+  if (paidCount < totalPayments) {
+    addPaymentsInRange({
+      id: loan.id,
+      name: loan.name,
+      amount: paymentAmount,
+      type: 'préstamo',
+      paymentType: (date) => {
+        const installmentNum = getInstallmentNumber(date);
+        return `Cuota ${installmentNum}/${totalPayments}`;
+      },
+      startDate,
+      frequency: loan.frequency,
+      countLimit: totalPayments - paidCount,
+    });
+  }
+});
+
+    // 3. Tarjetas de crédito
+    (state.creditCards || []).forEach((card) => {
+      if (!card.cardName || card.minPayment <= 0 || !card.paymentDate) return;
+
+      const paymentDate = new Date(card.paymentDate);
+      if (isNaN(paymentDate.getTime())) return;
+
+      const dayOfMonth = paymentDate.getDate();
+      const baseDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
+      const startDate = baseDate < now 
+        ? new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth)
+        : baseDate;
+
+      addPaymentsInRange({
+        id: card.id,
+        name: `${card.cardName} (${card.bank})`,
+        amount: card.minPayment,
+        type: 'tarjeta',
+        paymentType: 'Pago mínimo',
+        startDate,
+        frequency: 'mensual',
       });
-    }
+    });
+
+    return payments.sort((a, b) => {
+  // 1. Ordenar por monto: mayor a menor
+  if (b.amount !== a.amount) {
+    return b.amount - a.amount;
   }
+  // 2. Si el monto es igual, ordenar por nombre alfabéticamente
+  return a.name.localeCompare(b.name, 'es-MX');
 });
-
-
-    // 3. Tarjetas de crédito (pago mínimo)
-(state.creditCards || []).forEach((card) => {
-  if (!card.cardName || card.minPayment <= 0 || card.currentDebt <= 0) {
-    console.warn('Tarjeta con datos inválidos:', card);
-    return;
-  }
-
-  // Usar paymentDate como base (día del mes para pagar)
-  if (!card.paymentDate) {
-    console.warn('Tarjeta sin fecha de pago:', card);
-    return;
-  }
-
-  const paymentDate = new Date(card.paymentDate);
-  if (isNaN(paymentDate.getTime())) {
-    console.warn('Fecha de pago inválida:', card.paymentDate);
-    return;
-  }
-
-  const dayOfMonth = paymentDate.getDate(); // Ej: 10 (del 10 de cada mes)
-  const now = new Date();
-
-  // Construir la fecha de pago de este mes
-  let nextPaymentDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth);
-
-  // Si ya pasó este mes, usar el mes siguiente
-  if (nextPaymentDate < now) {
-    nextPaymentDate = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth);
-  }
-
-  // Asegurarnos de que sea una fecha válida (ej: no 30 de febrero)
-  if (isNaN(nextPaymentDate.getTime())) {
-    console.warn('Fecha de pago inválida generada:', nextPaymentDate);
-    return;
-  }
-
-  payments.push({
-    id: `${card.id}-card`,
-    type: 'tarjeta',
-    name: `${card.cardName} (${card.bank})`,
-    amount: card.minPayment,
-    dueDate: nextPaymentDate.toISOString().split('T')[0],
-    paymentType: 'Pago mínimo',
-  });
-});
-    
-
-    // Ordenar por fecha (próximos primero)
-    return payments.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
   }, [state.expenses, state.loans, state.creditCards, now]);
 
   // === Filtro: Esta semana / Esta quincena / Este mes ===
   const [filter, setFilter] = useState('week');
 
-  const getDateRange = () => {
-    const today = new Date();
-    let start, end;
+  const filteredPayments = allPendingPayments.filter(p => p.range === filter);
 
-    switch (filter) {
-      case 'week': {
-        const day = today.getDay();
-        const diffToMonday = today.getDate() - day + (day === 0 ? -6 : 1);
-        start = new Date(today);
-        start.setDate(diffToMonday);
-        start.setHours(0, 0, 0, 0);
-        end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23, 59, 59, 999);
-        break;
-      }
-
-      case 'fortnight': {
-        const date = today.getDate();
-        if (date <= 15) {
-          start = new Date(today.getFullYear(), today.getMonth(), 1);
-          end = new Date(today.getFullYear(), today.getMonth(), 15, 23, 59, 59, 999);
-        } else {
-          start = new Date(today.getFullYear(), today.getMonth(), 16);
-          end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-        }
-        break;
-      }
-
-      case 'month':
-      default: {
-        start = new Date(today.getFullYear(), today.getMonth(), 1);
-        end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-        break;
-      }
-    }
-
-    return { start, end };
-  };
-
-  const { start, end } = getDateRange();
-
-const filteredPayments = allPendingPayments.filter(p => {
-  const dueDate = new Date(p.dueDate);
-  dueDate.setHours(0, 0, 0, 0);
-
-  return dueDate >= start && dueDate <= end;
-});
-
-  const totalAmountDue = filteredPayments.reduce((sum, p) => {
-  const amount = Number(p.amount);
-  return sum + (isNaN(amount) ? 0 : amount);
-}, 0);
+  const totalAmountDue = filteredPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
   // === Exportaciones ===
   const generatePDF = () => {
@@ -245,102 +269,145 @@ const filteredPayments = allPendingPayments.filter(p => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200 pb-20">
-      <div id="dashboard-content" className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-
-        {/* Encabezado */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            Dashboard Financiero
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-200 pb-16">
+      <div id="dashboard-content" className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        
+        {/* 🔹 Encabezado */}
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
+            {new Intl.DateTimeFormat("es-MX", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }).format(now)}
           </h1>
           <div className="flex gap-2 mt-4 sm:mt-0">
-            <button
-              onClick={generatePDF}
-              className="flex items-center gap-2 text-sm bg-red-100 hover:bg-red-200 text-red-700 dark:text-red-300 dark:bg-red-900/30 dark:hover:bg-red-800/50 px-3 py-1 rounded-lg transition"
-            >
-              <Download className="w-4 h-4" /> PDF
-            </button>
-            <button
-              onClick={handleExportExcel}
-              className="flex items-center gap-2 text-sm bg-green-100 hover:bg-green-200 text-green-700 dark:text-green-300 dark:bg-green-900/30 dark:hover:bg-green-800/50 px-3 py-1 rounded-lg transition"
-            >
-              <FileSpreadsheet className="w-4 h-4" /> Excel
-            </button>
+            <Button variant="outline" size="sm" onClick={generatePDF}>
+              <Download className="w-4 h-4 mr-1" /> PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-1" /> Excel
+            </Button>
           </div>
-        </div>
+        </header>
 
-        {/* Resumen rápido */}
+        {/* 🔹 Resumen de KPIs */}
         <SummaryCards />
 
-        {/* Próximos pagos */}
-        <section className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+        {/* 🔹 Próximos Pagos */}
+        <section className="rounded-xl border border-gray-200 dark:border-gray-800  bg-white dark:bg-gray-900 shadow-sm p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h2 className="text-lg font-medium flex items-center gap-2 text-gray-700 dark:text-gray-100">
+            <h2 className="text-sm font-medium flex items-center gap-2 text-gray-700 dark:text-gray-300">
               <Calendar className="w-4 h-4 text-blue-500" /> Próximos Pagos
             </h2>
 
-            {/* Filtro */}
+            {/* Filtros */}
             <div className="flex gap-1 mt-2 sm:mt-0">
               {[
-                { key: 'week', label: 'Esta semana' },
-                { key: 'fortnight', label: 'Esta quincena' },
-                { key: 'month', label: 'Este mes' }
+                { key: "week", label: "Esta semana" },
+                { key: "fortnight", label: "Esta quincena" },
+                { key: "month", label: "Este mes" },
               ].map(({ key, label }) => (
-                <button
+                <Button
                   key={key}
+                  size="sm"
+                  variant={filter === key ? "default" : "ghost"}
                   onClick={() => setFilter(key)}
-                  className={`text-xs px-3 py-1 rounded-full transition ${
-                    filter === key
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
                 >
                   {label}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
 
-          <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4 text-sm">
-            <span>Total: <strong>{new Intl.NumberFormat('es-MX').format(totalAmountDue)}</strong></span>
+          <div className="flex justify-between items-center p-3 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm mb-3">
+            <span>
+              Total:{" "}
+              <strong>
+                {new Intl.NumberFormat("es-MX", {
+                  style: "currency",
+                  currency: "MXN",
+                }).format(totalAmountDue)}
+              </strong>
+            </span>
             <span className="text-xs text-gray-500">{filteredPayments.length} pagos</span>
           </div>
 
           {filteredPayments.length === 0 ? (
-            <p className="text-sm text-gray-500">No hay pagos programados en este periodo.</p>
-          ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {filteredPayments.map(p => (
-                <div key={p.id} className="flex justify-between text-sm border-b pb-2 dark:border-gray-700">
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-xs text-gray-500">{p.paymentType}</p>
-                  </div>
-                  <div className="text-right">
-                    <p>{new Intl.NumberFormat('es-MX').format(p.amount)}</p>
-                    <p className="text-xs text-orange-500">{new Date(p.dueDate).toLocaleDateString('es-MX')}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+  <p className="text-sm text-gray-500">
+    No hay pagos programados en este periodo.
+  </p>
+) : (
+  <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+    {filteredPayments.map((p) => {
+      const Icon =
+        p.type === "gasto"
+          ? DollarSign
+          : p.type === "préstamo"
+          ? Landmark
+          : CreditCard;
 
-        {/* Gráficas */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Ingresos vs Gastos (6 meses)</h2>
-            <IncomeBarChart />
+      return (
+        <div
+          key={p.id}
+          className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 shadow-sm"
+        >
+          {/* Icono */}
+          <div className="flex-shrink-0 mt-1">
+            <Icon className="w-5 h-5 text-blue-500" />
           </div>
-          <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Gastos por Categoría</h2>
-            <ExpenseCategoryChart />
+
+          {/* Info principal */}
+          <div className="flex-1">
+            <p className="font-medium text-gray-900 dark:text-gray-100">
+              {p.name}
+            </p>
+            <p className="text-xs text-gray-500">{p.paymentType}</p>
+          </div>
+
+          {/* Monto y fecha */}
+          <div className="text-right">
+            <p className="font-semibold text-gray-900 dark:text-gray-100">
+              {new Intl.NumberFormat("es-MX", {
+                style: "currency",
+                currency: "MXN",
+              }).format(p.amount)}
+            </p>
+            <p className="text-xs text-orange-500">
+              {new Date(p.dueDate).toLocaleDateString("es-MX")}
+            </p>
           </div>
         </div>
+      );
+    })}
+  </div>
+)}
+        </section>
 
+        {/* 🔹 Gráficas */}
+        <div className="grid  grid-cols-1 lg:grid-cols-2 gap-6">
+          <CardChart title="Ingresos vs Gastos (6 meses)">
+            <IncomeBarChart />
+          </CardChart>
+          <CardChart title="Gastos por Categoría">
+            <ExpenseCategoryChart />
+          </CardChart>
+        </div>
       </div>
     </div>
   );
 };
+
+// 📌 Wrapper para gráficas minimalistas
+const CardChart = ({ title, children }) => (
+  <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-6">
+    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
+      {title}
+    </h3>
+    {children}
+  </div>
+);
 
 export default DashboardPage;

@@ -99,7 +99,7 @@ const ExpensesPage = () => {
     category: form.category,
     description: form.description.trim(),
     amount: parseFloat(form.amount),
-    date: new Date().toISOString().split('T')[0],
+    date: form.nextPaymentDate ||new Date().toISOString().split('T')[0],
     frequency: form.frequency,
     endDate: form.endDate,
     lastPaymentDate: form.lastPaymentDate,

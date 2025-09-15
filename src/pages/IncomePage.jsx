@@ -5,6 +5,7 @@ import EditableItem from '../components/UI/EditableItem';
 import { saveData } from '../services/storageService';
 import ConfirmModal from '../components/UI/ConfirmModal';
 import { toast } from 'react-toastify';
+import { Wallet} from "lucide-react";
 
 // Headless UI
 import { Dialog, Transition } from '@headlessui/react';
@@ -320,7 +321,7 @@ const IncomePage = () => {
 
       {/* Lista de ingresos */}
       <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Ingresos</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4"><Wallet>Ingresos</Wallet></h3>
         {state.incomes.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No hay ingresos registrados.</p>
         ) : (
